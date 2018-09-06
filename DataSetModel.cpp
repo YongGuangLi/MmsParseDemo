@@ -34,23 +34,32 @@ bool DataSetModel::load(string filename)
 			string fcd = substrData.substr(0, fcdPos);
 			string fcda = substrData.substr(fcdPos + 1);
 
-			map<string, vector<string> >::iterator fcdIt = mapFcdData.find(fcd);
-
 			map<string, vector<string> >::iterator datasetIt = mapDataSetData.find(datasetname);
+
 			if(datasetIt == mapDataSetData.end())            //不存在
 			{
 				vector<string> vecFcd;
 				vecFcd.push_back(fcd);
 				mapDataSetData.insert(make_pair(datasetname, vecFcd));
-			}
-			else
+			}else
 			{
-				if(fcdIt == mapFcdData.end())            //不存在
+				bool isExits = false;
+				vector<string> vecFCD = datasetIt->second;
+				for(int i = 0; i < vecFCD.size(); ++i)
+				{
+					if(vecFCD.at(i) == fcd)
+					{
+						isExits = true;
+					}
+				}
+
+				if(!isExits)
 				{
 					datasetIt->second.push_back(fcd);
 				}
 			}
 
+			map<string, vector<string> >::iterator fcdIt = mapFcdData.find(fcd);
 
 			if(fcdIt == mapFcdData.end())            //不存在
 			{
@@ -60,7 +69,20 @@ bool DataSetModel::load(string filename)
 			}
 			else
 			{
-				fcdIt->second.push_back(fcda);
+				bool isExits = false;
+				vector<string> vecFCDA = fcdIt->second;
+				for(int i = 0; i < vecFCDA.size(); ++i)
+				{
+					if(vecFCDA.at(i) == fcda)
+					{
+						isExits = true;
+					}
+				}
+
+				if(!isExits)
+				{
+					fcdIt->second.push_back(fcda);
+				}
 			}
 		}
 	}

@@ -8,7 +8,6 @@
 #ifndef READPCAPFILE_H_
 #define READPCAPFILE_H_
 
-#include "Log4CplusMacro.h"
 #include <pcap.h>
 #include <boost/filesystem.hpp>
 #include <string>
@@ -23,8 +22,6 @@ public:
 	virtual ~ReadPcapFile();
 
 	bool openPcapFile(string filePath);
-
-	void renamePcapFile(string oldFile, string newFile);
 
 	int pcapNextEx(struct pcap_pkthdr **, const u_char **);
 private:

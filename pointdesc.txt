@@ -1,0 +1,3 @@
+D21CTRL/ATCC1$CO$TapChg$SBOw:110kv茂光线
+D21CTRL/ATCC1$CO$TapChg$Oper:120kv茂光线
+CL1101LD0/LLN0$CO$TapchgEna$Oper:130kv茂光线

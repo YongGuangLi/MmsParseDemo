@@ -8,33 +8,37 @@
 #ifndef REDISHELPER_H_
 #define REDISHELPER_H_
 
-#include "Log4CplusMacro.h"    //需要放到最前面，可能是引用庫的顺序
-
-#include "acl_cpp/lib_acl.hpp"       //需要把-lpthread 链接在libacl庫之后
-#include "lib_acl.h"
-
+#include "acl_cpp/lib_acl.hpp"
 #include <string>
 
 using namespace std;
 
-#define CHANNEL "MmsParse"
+#define REDIS_CHANNEL_ALARM "alarmdata"
+#define REDIS_CHANNEL_NETCONTROLANA "NetControlAna"
+#define REDIS_CHANNEL_CONFIG "config"
 
 class RedisHelper {
 public:
-	RedisHelper();
+    RedisHelper(string addr, bool retry = false, bool sentinel = false, int conn_timeout = 60, int rw_timeout = 30);
 	virtual ~RedisHelper();
-	bool open(string addr, bool sentinel = false, int conn_timeout = 60, int rw_timeout = 30);
+    bool open();
+    bool check_connect();
 	bool set(string key, string value);
-	int publish(string channel, string message);              //返回订阅者数量， -1出错
-	int publish(string channel, char* message, int length);   //返回订阅者数量， -1出错
-	int subscribe(string channel);                            //the number of channels subscribed by the current client
-	bool getMessage(string& message, string channel = "");
-
+	int publish(string channel, string message, string key = "");              //返回订阅者数量， -1出错
+	int publish(string channel, char* message, int length, string key = "");   //返回订阅者数量， -1出错
+    int subscribe(string channel);                                            //the number of channels subscribed by the current client
+    bool getMessage(string& message, string channel = "");
 private:
 	acl::redis_client *client_pub_;
 	acl::redis_client *client_sub_;
 	acl::redis_pubsub redis_pub_;
 	acl::redis_pubsub redis_sub_;
+
+    string addr_;
+    bool retry_;
+    bool sentinel_;
+    int conn_timeout_;
+    int rw_timeout_;
 };
 
 #endif /* REDISHELPER_H_ */

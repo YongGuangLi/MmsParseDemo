@@ -9,9 +9,11 @@
 #define PACKETPARSE_H_
 
 #include "RtdbMessage.pb.h"
-#include "Log4CplusMacro.h"
+#include "Log4Cplus.h"
 #include "RedisHelper.h"
+#include "MysqlHelper.h"
 #include "SemaphoreQueue.h"
+#include "ConfigIni.h"
 #include "DataSetModel.h"
 
 #include <mms_value.h>
@@ -54,12 +56,15 @@ typedef struct
 {
 	struct ip* iphdr;
 	struct tcphdr* tcphdr;
+	string srcIp;
+	string dstIp;
 	uint32_t invokeId;
 	ServiceType serviceType;
 	vector<string> vecDomainName;
 	vector<string> vecItemName;
 	MmsValue*  mmsValue;
 	vector<int> vecResponseResult;
+	uint64_t packetTimeStamp;
 
 }stMmsContent;
 
@@ -93,11 +98,18 @@ public:
 
 	void SetUnConfirmedPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent);
 
-	void analysisMmsContent(stMmsContent mmsContent);
+public:
+	void analysisMmsContent(stMmsContent mmsContent);                                //分析MMS报文内容
 
-	void analysisVaribleList(stMmsContent mmsContent);                              //分析有名变量列表
+	void analysisServiceRequestWrite(stMmsContent mmsContent);                       //分析遥控请求
+
+	void analysisServiceResponseWrite(stMmsContent mmsContent);                      //分析遥控回复
+
+	void analysisVaribleList(stMmsContent mmsContent);                               //分析有名变量列表
 
 	PointValueType getPointValueType(MmsValue*  mmsValue);
+
+	char* getMmsValueUtcTime(MmsValue*  mmsValue, char* buffer, int bufferSize);
 
 	int publishPointValue(string fcda, MmsValue*  fcdaMmsValue);
 
@@ -110,14 +122,19 @@ public:
 
 	void subscribe();                                  //订阅redis，循环获取数据
 
+	void sendHeartBeat();                              //发送心跳
+
 	void start();                                      //开启线程
 
 	void stop();
 
 private:
-	map<uint32_t, stMmsContent> mapInvokeIdMmsContent;
+	map<uint32_t, stMmsContent> mapInvokeIdMmsContent;       //保存遥控请求数据
 
-	RedisHelper redisHelper;
+	RedisHelper* redisHelper;
+	RedisHelper *heatRedisHelper;                 //发送心跳 redis
+
+	MysqlHelper mysqlHelper;
 
 	SemaphoreQueue<stMmsContent> queMmsContent;
 

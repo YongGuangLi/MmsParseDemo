@@ -54,3 +54,15 @@ int PcapDirManager::getFileNum()
 	int iSize = mapLastWriteFile_.size();
 	return iSize;
 }
+
+void PcapDirManager::renamePcapFile(string oldFile, string newFile)
+{
+	boost::filesystem::path filePath(newFile);
+	if(!boost::filesystem::exists(filePath.parent_path()))         //如果不存在，则创建
+	{
+		boost::filesystem::create_directory(filePath.parent_path());
+	}
+
+	boost::filesystem::rename(oldFile, newFile);
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "move " + oldFile + " to " + newFile);
+}
