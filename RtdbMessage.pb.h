@@ -96,6 +96,9 @@ extern SOEMessageDefaultTypeInternal _SOEMessage_default_instance_;
 class UPRealPointValue;
 class UPRealPointValueDefaultTypeInternal;
 extern UPRealPointValueDefaultTypeInternal _UPRealPointValue_default_instance_;
+class UpdateRuleFile;
+class UpdateRuleFileDefaultTypeInternal;
+extern UpdateRuleFileDefaultTypeInternal _UpdateRuleFile_default_instance_;
 
 namespace protobuf_RtdbMessage_2eproto {
 // Internal implementation detail -- do not call these.
@@ -130,6 +133,29 @@ const PointValueType PointValueType_MIN = VTYPE_RESERVE;
 const PointValueType PointValueType_MAX = VTYPE_UNKOWN;
 const int PointValueType_ARRAYSIZE = PointValueType_MAX + 1;
 
+enum CtrlCmdType {
+  CTYPE_SELECT = 0,
+  CTYPE_EXECUTE = 1,
+  CtrlCmdType_INT_MIN_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32min,
+  CtrlCmdType_INT_MAX_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32max
+};
+bool CtrlCmdType_IsValid(int value);
+const CtrlCmdType CtrlCmdType_MIN = CTYPE_SELECT;
+const CtrlCmdType CtrlCmdType_MAX = CTYPE_EXECUTE;
+const int CtrlCmdType_ARRAYSIZE = CtrlCmdType_MAX + 1;
+
+enum CmdExecuteResult {
+  CTYPE_ACTIVE = 0,
+  CTYPE_ACTIVESUCCESS = 1,
+  CTYPE_ACTIVEFAIL = 2,
+  CmdExecuteResult_INT_MIN_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32min,
+  CmdExecuteResult_INT_MAX_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32max
+};
+bool CmdExecuteResult_IsValid(int value);
+const CmdExecuteResult CmdExecuteResult_MIN = CTYPE_ACTIVE;
+const CmdExecuteResult CmdExecuteResult_MAX = CTYPE_ACTIVEFAIL;
+const int CmdExecuteResult_ARRAYSIZE = CmdExecuteResult_MAX + 1;
+
 enum RtdbMessageType {
   TYPE_LOGREQUEST = 0,
   TYPE_LOGRESPONSE = 1,
@@ -148,12 +174,13 @@ enum RtdbMessageType {
   TYPE_UP_REALPOINTVALUE = 14,
   TYPE_ALARMDATAMSG = 15,
   TYPE_REMOTECONTROL = 16,
+  TYPE_UPDATERULEFILE = 17,
   RtdbMessageType_INT_MIN_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32min,
   RtdbMessageType_INT_MAX_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32max
 };
 bool RtdbMessageType_IsValid(int value);
 const RtdbMessageType RtdbMessageType_MIN = TYPE_LOGREQUEST;
-const RtdbMessageType RtdbMessageType_MAX = TYPE_REMOTECONTROL;
+const RtdbMessageType RtdbMessageType_MAX = TYPE_UPDATERULEFILE;
 const int RtdbMessageType_ARRAYSIZE = RtdbMessageType_MAX + 1;
 
 enum ObjectType {
@@ -1893,6 +1920,28 @@ class RealPointValue : public ::google::protobuf::MessageLite /* @@protoc_insert
 
   // accessors -------------------------------------------------------
 
+  // repeated string pcapFileName = 13;
+  int pcapfilename_size() const;
+  void clear_pcapfilename();
+  static const int kPcapFileNameFieldNumber = 13;
+  const ::std::string& pcapfilename(int index) const;
+  ::std::string* mutable_pcapfilename(int index);
+  void set_pcapfilename(int index, const ::std::string& value);
+  #if LANG_CXX11
+  void set_pcapfilename(int index, ::std::string&& value);
+  #endif
+  void set_pcapfilename(int index, const char* value);
+  void set_pcapfilename(int index, const char* value, size_t size);
+  ::std::string* add_pcapfilename();
+  void add_pcapfilename(const ::std::string& value);
+  #if LANG_CXX11
+  void add_pcapfilename(::std::string&& value);
+  #endif
+  void add_pcapfilename(const char* value);
+  void add_pcapfilename(const char* value, size_t size);
+  const ::google::protobuf::RepeatedPtrField< ::std::string>& pcapfilename() const;
+  ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_pcapfilename();
+
   // string channelName = 1;
   void clear_channelname();
   static const int kChannelNameFieldNumber = 1;
@@ -1949,6 +1998,62 @@ class RealPointValue : public ::google::protobuf::MessageLite /* @@protoc_insert
   ::std::string* release_pointaddr();
   void set_allocated_pointaddr(::std::string* pointaddr);
 
+  // string timeValue = 7;
+  void clear_timevalue();
+  static const int kTimeValueFieldNumber = 7;
+  const ::std::string& timevalue() const;
+  void set_timevalue(const ::std::string& value);
+  #if LANG_CXX11
+  void set_timevalue(::std::string&& value);
+  #endif
+  void set_timevalue(const char* value);
+  void set_timevalue(const char* value, size_t size);
+  ::std::string* mutable_timevalue();
+  ::std::string* release_timevalue();
+  void set_allocated_timevalue(::std::string* timevalue);
+
+  // string sourIp = 8;
+  void clear_sourip();
+  static const int kSourIpFieldNumber = 8;
+  const ::std::string& sourip() const;
+  void set_sourip(const ::std::string& value);
+  #if LANG_CXX11
+  void set_sourip(::std::string&& value);
+  #endif
+  void set_sourip(const char* value);
+  void set_sourip(const char* value, size_t size);
+  ::std::string* mutable_sourip();
+  ::std::string* release_sourip();
+  void set_allocated_sourip(::std::string* sourip);
+
+  // string destIp = 9;
+  void clear_destip();
+  static const int kDestIpFieldNumber = 9;
+  const ::std::string& destip() const;
+  void set_destip(const ::std::string& value);
+  #if LANG_CXX11
+  void set_destip(::std::string&& value);
+  #endif
+  void set_destip(const char* value);
+  void set_destip(const char* value, size_t size);
+  ::std::string* mutable_destip();
+  ::std::string* release_destip();
+  void set_allocated_destip(::std::string* destip);
+
+  // string protocolType = 10;
+  void clear_protocoltype();
+  static const int kProtocolTypeFieldNumber = 10;
+  const ::std::string& protocoltype() const;
+  void set_protocoltype(const ::std::string& value);
+  #if LANG_CXX11
+  void set_protocoltype(::std::string&& value);
+  #endif
+  void set_protocoltype(const char* value);
+  void set_protocoltype(const char* value, size_t size);
+  ::std::string* mutable_protocoltype();
+  ::std::string* release_protocoltype();
+  void set_allocated_protocoltype(::std::string* protocoltype);
+
   // .PointValueType valueType = 5;
   void clear_valuetype();
   static const int kValueTypeFieldNumber = 5;
@@ -1961,16 +2066,35 @@ class RealPointValue : public ::google::protobuf::MessageLite /* @@protoc_insert
   ::google::protobuf::int32 channeltype() const;
   void set_channeltype(::google::protobuf::int32 value);
 
+  // .CtrlCmdType ctrlCmdType = 11;
+  void clear_ctrlcmdtype();
+  static const int kCtrlCmdTypeFieldNumber = 11;
+  ::CtrlCmdType ctrlcmdtype() const;
+  void set_ctrlcmdtype(::CtrlCmdType value);
+
+  // .CmdExecuteResult executeResult = 12;
+  void clear_executeresult();
+  static const int kExecuteResultFieldNumber = 12;
+  ::CmdExecuteResult executeresult() const;
+  void set_executeresult(::CmdExecuteResult value);
+
   // @@protoc_insertion_point(class_scope:RealPointValue)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::RepeatedPtrField< ::std::string> pcapfilename_;
   ::google::protobuf::internal::ArenaStringPtr channelname_;
   ::google::protobuf::internal::ArenaStringPtr devicename_;
   ::google::protobuf::internal::ArenaStringPtr pointvalue_;
   ::google::protobuf::internal::ArenaStringPtr pointaddr_;
+  ::google::protobuf::internal::ArenaStringPtr timevalue_;
+  ::google::protobuf::internal::ArenaStringPtr sourip_;
+  ::google::protobuf::internal::ArenaStringPtr destip_;
+  ::google::protobuf::internal::ArenaStringPtr protocoltype_;
   int valuetype_;
   ::google::protobuf::int32 channeltype_;
+  int ctrlcmdtype_;
+  int executeresult_;
   mutable int _cached_size_;
   friend struct protobuf_RtdbMessage_2eproto::TableStruct;
 };
@@ -2792,6 +2916,114 @@ class AlarmDataMsg : public ::google::protobuf::MessageLite /* @@protoc_insertio
 };
 // -------------------------------------------------------------------
 
+class UpdateRuleFile : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(class_definition:UpdateRuleFile) */ {
+ public:
+  UpdateRuleFile();
+  virtual ~UpdateRuleFile();
+
+  UpdateRuleFile(const UpdateRuleFile& from);
+
+  inline UpdateRuleFile& operator=(const UpdateRuleFile& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  static const UpdateRuleFile& default_instance();
+
+  static inline const UpdateRuleFile* internal_default_instance() {
+    return reinterpret_cast<const UpdateRuleFile*>(
+               &_UpdateRuleFile_default_instance_);
+  }
+  static PROTOBUF_CONSTEXPR int const kIndexInFileMessages =
+    20;
+
+  void Swap(UpdateRuleFile* other);
+
+  // implements Message ----------------------------------------------
+
+  inline UpdateRuleFile* New() const PROTOBUF_FINAL { return New(NULL); }
+
+  UpdateRuleFile* New(::google::protobuf::Arena* arena) const PROTOBUF_FINAL;
+  void CheckTypeAndMergeFrom(const ::google::protobuf::MessageLite& from)
+    PROTOBUF_FINAL;
+  void CopyFrom(const UpdateRuleFile& from);
+  void MergeFrom(const UpdateRuleFile& from);
+  void Clear() PROTOBUF_FINAL;
+  bool IsInitialized() const PROTOBUF_FINAL;
+
+  size_t ByteSizeLong() const PROTOBUF_FINAL;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input) PROTOBUF_FINAL;
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const PROTOBUF_FINAL;
+  void DiscardUnknownFields();
+  int GetCachedSize() const PROTOBUF_FINAL { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(UpdateRuleFile* other);
+  private:
+  inline ::google::protobuf::Arena* GetArenaNoVirtual() const {
+    return NULL;
+  }
+  inline void* MaybeArenaPtr() const {
+    return NULL;
+  }
+  public:
+
+  ::std::string GetTypeName() const PROTOBUF_FINAL;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // string time = 1;
+  void clear_time();
+  static const int kTimeFieldNumber = 1;
+  const ::std::string& time() const;
+  void set_time(const ::std::string& value);
+  #if LANG_CXX11
+  void set_time(::std::string&& value);
+  #endif
+  void set_time(const char* value);
+  void set_time(const char* value, size_t size);
+  ::std::string* mutable_time();
+  ::std::string* release_time();
+  void set_allocated_time(::std::string* time);
+
+  // string fileName = 2;
+  void clear_filename();
+  static const int kFileNameFieldNumber = 2;
+  const ::std::string& filename() const;
+  void set_filename(const ::std::string& value);
+  #if LANG_CXX11
+  void set_filename(::std::string&& value);
+  #endif
+  void set_filename(const char* value);
+  void set_filename(const char* value, size_t size);
+  ::std::string* mutable_filename();
+  ::std::string* release_filename();
+  void set_allocated_filename(::std::string* filename);
+
+  // int32 fileType = 3;
+  void clear_filetype();
+  static const int kFileTypeFieldNumber = 3;
+  ::google::protobuf::int32 filetype() const;
+  void set_filetype(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:UpdateRuleFile)
+ private:
+
+  ::google::protobuf::internal::InternalMetadataWithArenaLite _internal_metadata_;
+  ::google::protobuf::internal::ArenaStringPtr time_;
+  ::google::protobuf::internal::ArenaStringPtr filename_;
+  ::google::protobuf::int32 filetype_;
+  mutable int _cached_size_;
+  friend struct protobuf_RtdbMessage_2eproto::TableStruct;
+};
+// -------------------------------------------------------------------
+
 class RemoteControl : public ::google::protobuf::MessageLite /* @@protoc_insertion_point(class_definition:RemoteControl) */ {
  public:
   RemoteControl();
@@ -2811,7 +3043,7 @@ class RemoteControl : public ::google::protobuf::MessageLite /* @@protoc_inserti
                &_RemoteControl_default_instance_);
   }
   static PROTOBUF_CONSTEXPR int const kIndexInFileMessages =
-    20;
+    21;
 
   void Swap(RemoteControl* other);
 
@@ -3045,7 +3277,7 @@ class RtdbMessage : public ::google::protobuf::MessageLite /* @@protoc_insertion
                &_RtdbMessage_default_instance_);
   }
   static PROTOBUF_CONSTEXPR int const kIndexInFileMessages =
-    21;
+    22;
 
   void Swap(RtdbMessage* other);
 
@@ -3232,6 +3464,15 @@ class RtdbMessage : public ::google::protobuf::MessageLite /* @@protoc_insertion
   ::RemoteControl* release_remotecontrol();
   void set_allocated_remotecontrol(::RemoteControl* remotecontrol);
 
+  // .UpdateRuleFile updateRuleFile = 24;
+  bool has_updaterulefile() const;
+  void clear_updaterulefile();
+  static const int kUpdateRuleFileFieldNumber = 24;
+  const ::UpdateRuleFile& updaterulefile() const;
+  ::UpdateRuleFile* mutable_updaterulefile();
+  ::UpdateRuleFile* release_updaterulefile();
+  void set_allocated_updaterulefile(::UpdateRuleFile* updaterulefile);
+
   // int32 fromObject = 1;
   void clear_fromobject();
   static const int kFromObjectFieldNumber = 1;
@@ -3288,6 +3529,7 @@ class RtdbMessage : public ::google::protobuf::MessageLite /* @@protoc_insertion
   ::AlarmDataMsg* alarmdatamsg_;
   ::UPRealPointValue* uprealpointvalue_;
   ::RemoteControl* remotecontrol_;
+  ::UpdateRuleFile* updaterulefile_;
   ::google::protobuf::int32 fromobject_;
   ::google::protobuf::int32 toobject_;
   int fromobjecttype_;
@@ -5563,6 +5805,315 @@ inline void RealPointValue::set_channeltype(::google::protobuf::int32 value) {
   // @@protoc_insertion_point(field_set:RealPointValue.channelType)
 }
 
+// string timeValue = 7;
+inline void RealPointValue::clear_timevalue() {
+  timevalue_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& RealPointValue::timevalue() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.timeValue)
+  return timevalue_.GetNoArena();
+}
+inline void RealPointValue::set_timevalue(const ::std::string& value) {
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.timeValue)
+}
+#if LANG_CXX11
+inline void RealPointValue::set_timevalue(::std::string&& value) {
+  
+  timevalue_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.timeValue)
+}
+#endif
+inline void RealPointValue::set_timevalue(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.timeValue)
+}
+inline void RealPointValue::set_timevalue(const char* value, size_t size) {
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.timeValue)
+}
+inline ::std::string* RealPointValue::mutable_timevalue() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.timeValue)
+  return timevalue_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* RealPointValue::release_timevalue() {
+  // @@protoc_insertion_point(field_release:RealPointValue.timeValue)
+  
+  return timevalue_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void RealPointValue::set_allocated_timevalue(::std::string* timevalue) {
+  if (timevalue != NULL) {
+    
+  } else {
+    
+  }
+  timevalue_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), timevalue);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.timeValue)
+}
+
+// string sourIp = 8;
+inline void RealPointValue::clear_sourip() {
+  sourip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& RealPointValue::sourip() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.sourIp)
+  return sourip_.GetNoArena();
+}
+inline void RealPointValue::set_sourip(const ::std::string& value) {
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.sourIp)
+}
+#if LANG_CXX11
+inline void RealPointValue::set_sourip(::std::string&& value) {
+  
+  sourip_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.sourIp)
+}
+#endif
+inline void RealPointValue::set_sourip(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.sourIp)
+}
+inline void RealPointValue::set_sourip(const char* value, size_t size) {
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.sourIp)
+}
+inline ::std::string* RealPointValue::mutable_sourip() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.sourIp)
+  return sourip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* RealPointValue::release_sourip() {
+  // @@protoc_insertion_point(field_release:RealPointValue.sourIp)
+  
+  return sourip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void RealPointValue::set_allocated_sourip(::std::string* sourip) {
+  if (sourip != NULL) {
+    
+  } else {
+    
+  }
+  sourip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), sourip);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.sourIp)
+}
+
+// string destIp = 9;
+inline void RealPointValue::clear_destip() {
+  destip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& RealPointValue::destip() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.destIp)
+  return destip_.GetNoArena();
+}
+inline void RealPointValue::set_destip(const ::std::string& value) {
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.destIp)
+}
+#if LANG_CXX11
+inline void RealPointValue::set_destip(::std::string&& value) {
+  
+  destip_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.destIp)
+}
+#endif
+inline void RealPointValue::set_destip(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.destIp)
+}
+inline void RealPointValue::set_destip(const char* value, size_t size) {
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.destIp)
+}
+inline ::std::string* RealPointValue::mutable_destip() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.destIp)
+  return destip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* RealPointValue::release_destip() {
+  // @@protoc_insertion_point(field_release:RealPointValue.destIp)
+  
+  return destip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void RealPointValue::set_allocated_destip(::std::string* destip) {
+  if (destip != NULL) {
+    
+  } else {
+    
+  }
+  destip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), destip);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.destIp)
+}
+
+// string protocolType = 10;
+inline void RealPointValue::clear_protocoltype() {
+  protocoltype_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& RealPointValue::protocoltype() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.protocolType)
+  return protocoltype_.GetNoArena();
+}
+inline void RealPointValue::set_protocoltype(const ::std::string& value) {
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.protocolType)
+}
+#if LANG_CXX11
+inline void RealPointValue::set_protocoltype(::std::string&& value) {
+  
+  protocoltype_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.protocolType)
+}
+#endif
+inline void RealPointValue::set_protocoltype(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.protocolType)
+}
+inline void RealPointValue::set_protocoltype(const char* value, size_t size) {
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.protocolType)
+}
+inline ::std::string* RealPointValue::mutable_protocoltype() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.protocolType)
+  return protocoltype_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* RealPointValue::release_protocoltype() {
+  // @@protoc_insertion_point(field_release:RealPointValue.protocolType)
+  
+  return protocoltype_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void RealPointValue::set_allocated_protocoltype(::std::string* protocoltype) {
+  if (protocoltype != NULL) {
+    
+  } else {
+    
+  }
+  protocoltype_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), protocoltype);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.protocolType)
+}
+
+// .CtrlCmdType ctrlCmdType = 11;
+inline void RealPointValue::clear_ctrlcmdtype() {
+  ctrlcmdtype_ = 0;
+}
+inline ::CtrlCmdType RealPointValue::ctrlcmdtype() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.ctrlCmdType)
+  return static_cast< ::CtrlCmdType >(ctrlcmdtype_);
+}
+inline void RealPointValue::set_ctrlcmdtype(::CtrlCmdType value) {
+  
+  ctrlcmdtype_ = value;
+  // @@protoc_insertion_point(field_set:RealPointValue.ctrlCmdType)
+}
+
+// .CmdExecuteResult executeResult = 12;
+inline void RealPointValue::clear_executeresult() {
+  executeresult_ = 0;
+}
+inline ::CmdExecuteResult RealPointValue::executeresult() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.executeResult)
+  return static_cast< ::CmdExecuteResult >(executeresult_);
+}
+inline void RealPointValue::set_executeresult(::CmdExecuteResult value) {
+  
+  executeresult_ = value;
+  // @@protoc_insertion_point(field_set:RealPointValue.executeResult)
+}
+
+// repeated string pcapFileName = 13;
+inline int RealPointValue::pcapfilename_size() const {
+  return pcapfilename_.size();
+}
+inline void RealPointValue::clear_pcapfilename() {
+  pcapfilename_.Clear();
+}
+inline const ::std::string& RealPointValue::pcapfilename(int index) const {
+  // @@protoc_insertion_point(field_get:RealPointValue.pcapFileName)
+  return pcapfilename_.Get(index);
+}
+inline ::std::string* RealPointValue::mutable_pcapfilename(int index) {
+  // @@protoc_insertion_point(field_mutable:RealPointValue.pcapFileName)
+  return pcapfilename_.Mutable(index);
+}
+inline void RealPointValue::set_pcapfilename(int index, const ::std::string& value) {
+  // @@protoc_insertion_point(field_set:RealPointValue.pcapFileName)
+  pcapfilename_.Mutable(index)->assign(value);
+}
+#if LANG_CXX11
+inline void RealPointValue::set_pcapfilename(int index, ::std::string&& value) {
+  // @@protoc_insertion_point(field_set:RealPointValue.pcapFileName)
+  pcapfilename_.Mutable(index)->assign(std::move(value));
+}
+#endif
+inline void RealPointValue::set_pcapfilename(int index, const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  pcapfilename_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:RealPointValue.pcapFileName)
+}
+inline void RealPointValue::set_pcapfilename(int index, const char* value, size_t size) {
+  pcapfilename_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.pcapFileName)
+}
+inline ::std::string* RealPointValue::add_pcapfilename() {
+  // @@protoc_insertion_point(field_add_mutable:RealPointValue.pcapFileName)
+  return pcapfilename_.Add();
+}
+inline void RealPointValue::add_pcapfilename(const ::std::string& value) {
+  pcapfilename_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:RealPointValue.pcapFileName)
+}
+#if LANG_CXX11
+inline void RealPointValue::add_pcapfilename(::std::string&& value) {
+  pcapfilename_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:RealPointValue.pcapFileName)
+}
+#endif
+inline void RealPointValue::add_pcapfilename(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  pcapfilename_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:RealPointValue.pcapFileName)
+}
+inline void RealPointValue::add_pcapfilename(const char* value, size_t size) {
+  pcapfilename_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:RealPointValue.pcapFileName)
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+RealPointValue::pcapfilename() const {
+  // @@protoc_insertion_point(field_list:RealPointValue.pcapFileName)
+  return pcapfilename_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+RealPointValue::mutable_pcapfilename() {
+  // @@protoc_insertion_point(field_mutable_list:RealPointValue.pcapFileName)
+  return &pcapfilename_;
+}
+
 // -------------------------------------------------------------------
 
 // HeartBeatMessage
@@ -7128,6 +7679,130 @@ inline void AlarmDataMsg::set_allocated_filename(::std::string* filename) {
 
 // -------------------------------------------------------------------
 
+// UpdateRuleFile
+
+// string time = 1;
+inline void UpdateRuleFile::clear_time() {
+  time_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& UpdateRuleFile::time() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.time)
+  return time_.GetNoArena();
+}
+inline void UpdateRuleFile::set_time(const ::std::string& value) {
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.time)
+}
+#if LANG_CXX11
+inline void UpdateRuleFile::set_time(::std::string&& value) {
+  
+  time_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:UpdateRuleFile.time)
+}
+#endif
+inline void UpdateRuleFile::set_time(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:UpdateRuleFile.time)
+}
+inline void UpdateRuleFile::set_time(const char* value, size_t size) {
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:UpdateRuleFile.time)
+}
+inline ::std::string* UpdateRuleFile::mutable_time() {
+  
+  // @@protoc_insertion_point(field_mutable:UpdateRuleFile.time)
+  return time_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* UpdateRuleFile::release_time() {
+  // @@protoc_insertion_point(field_release:UpdateRuleFile.time)
+  
+  return time_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void UpdateRuleFile::set_allocated_time(::std::string* time) {
+  if (time != NULL) {
+    
+  } else {
+    
+  }
+  time_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), time);
+  // @@protoc_insertion_point(field_set_allocated:UpdateRuleFile.time)
+}
+
+// string fileName = 2;
+inline void UpdateRuleFile::clear_filename() {
+  filename_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& UpdateRuleFile::filename() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.fileName)
+  return filename_.GetNoArena();
+}
+inline void UpdateRuleFile::set_filename(const ::std::string& value) {
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.fileName)
+}
+#if LANG_CXX11
+inline void UpdateRuleFile::set_filename(::std::string&& value) {
+  
+  filename_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:UpdateRuleFile.fileName)
+}
+#endif
+inline void UpdateRuleFile::set_filename(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:UpdateRuleFile.fileName)
+}
+inline void UpdateRuleFile::set_filename(const char* value, size_t size) {
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:UpdateRuleFile.fileName)
+}
+inline ::std::string* UpdateRuleFile::mutable_filename() {
+  
+  // @@protoc_insertion_point(field_mutable:UpdateRuleFile.fileName)
+  return filename_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* UpdateRuleFile::release_filename() {
+  // @@protoc_insertion_point(field_release:UpdateRuleFile.fileName)
+  
+  return filename_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void UpdateRuleFile::set_allocated_filename(::std::string* filename) {
+  if (filename != NULL) {
+    
+  } else {
+    
+  }
+  filename_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), filename);
+  // @@protoc_insertion_point(field_set_allocated:UpdateRuleFile.fileName)
+}
+
+// int32 fileType = 3;
+inline void UpdateRuleFile::clear_filetype() {
+  filetype_ = 0;
+}
+inline ::google::protobuf::int32 UpdateRuleFile::filetype() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.fileType)
+  return filetype_;
+}
+inline void UpdateRuleFile::set_filetype(::google::protobuf::int32 value) {
+  
+  filetype_ = value;
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.fileType)
+}
+
+// -------------------------------------------------------------------
+
 // RemoteControl
 
 // string protocolName = 1;
@@ -8375,7 +9050,48 @@ inline void RtdbMessage::set_allocated_remotecontrol(::RemoteControl* remotecont
   // @@protoc_insertion_point(field_set_allocated:RtdbMessage.remoteControl)
 }
 
+// .UpdateRuleFile updateRuleFile = 24;
+inline bool RtdbMessage::has_updaterulefile() const {
+  return this != internal_default_instance() && updaterulefile_ != NULL;
+}
+inline void RtdbMessage::clear_updaterulefile() {
+  if (GetArenaNoVirtual() == NULL && updaterulefile_ != NULL) delete updaterulefile_;
+  updaterulefile_ = NULL;
+}
+inline const ::UpdateRuleFile& RtdbMessage::updaterulefile() const {
+  // @@protoc_insertion_point(field_get:RtdbMessage.updateRuleFile)
+  return updaterulefile_ != NULL ? *updaterulefile_
+                         : *::UpdateRuleFile::internal_default_instance();
+}
+inline ::UpdateRuleFile* RtdbMessage::mutable_updaterulefile() {
+  
+  if (updaterulefile_ == NULL) {
+    updaterulefile_ = new ::UpdateRuleFile;
+  }
+  // @@protoc_insertion_point(field_mutable:RtdbMessage.updateRuleFile)
+  return updaterulefile_;
+}
+inline ::UpdateRuleFile* RtdbMessage::release_updaterulefile() {
+  // @@protoc_insertion_point(field_release:RtdbMessage.updateRuleFile)
+  
+  ::UpdateRuleFile* temp = updaterulefile_;
+  updaterulefile_ = NULL;
+  return temp;
+}
+inline void RtdbMessage::set_allocated_updaterulefile(::UpdateRuleFile* updaterulefile) {
+  delete updaterulefile_;
+  updaterulefile_ = updaterulefile;
+  if (updaterulefile) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_set_allocated:RtdbMessage.updateRuleFile)
+}
+
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
@@ -8427,6 +9143,8 @@ namespace google {
 namespace protobuf {
 
 template <> struct is_proto_enum< ::PointValueType> : ::google::protobuf::internal::true_type {};
+template <> struct is_proto_enum< ::CtrlCmdType> : ::google::protobuf::internal::true_type {};
+template <> struct is_proto_enum< ::CmdExecuteResult> : ::google::protobuf::internal::true_type {};
 template <> struct is_proto_enum< ::RtdbMessageType> : ::google::protobuf::internal::true_type {};
 template <> struct is_proto_enum< ::ObjectType> : ::google::protobuf::internal::true_type {};
 

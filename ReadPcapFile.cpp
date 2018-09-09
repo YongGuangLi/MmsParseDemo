@@ -9,7 +9,7 @@
 
 ReadPcapFile::ReadPcapFile() {
 	// TODO Auto-generated constructor stub
-
+	fp_ = NULL;
 }
 
 ReadPcapFile::~ReadPcapFile() {
@@ -32,3 +32,9 @@ int ReadPcapFile::pcapNextEx(struct pcap_pkthdr ** pkthdr, const u_char ** dataB
 	int result = pcap_next_ex(fp_, pkthdr, dataBuf);
 	return result;
 }
+
+void ReadPcapFile::closePcapFile()
+{
+	pcap_close(fp_);
+}
+

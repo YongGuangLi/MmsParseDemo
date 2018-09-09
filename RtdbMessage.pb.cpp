@@ -53,6 +53,8 @@ class FlowThresholdDefaultTypeInternal : public ::google::protobuf::internal::Ex
 } _FlowThreshold_default_instance_;
 class AlarmDataMsgDefaultTypeInternal : public ::google::protobuf::internal::ExplicitlyConstructed<AlarmDataMsg> {
 } _AlarmDataMsg_default_instance_;
+class UpdateRuleFileDefaultTypeInternal : public ::google::protobuf::internal::ExplicitlyConstructed<UpdateRuleFile> {
+} _UpdateRuleFile_default_instance_;
 class RemoteControlDefaultTypeInternal : public ::google::protobuf::internal::ExplicitlyConstructed<RemoteControl> {
 } _RemoteControl_default_instance_;
 class RtdbMessageDefaultTypeInternal : public ::google::protobuf::internal::ExplicitlyConstructed<RtdbMessage> {
@@ -71,6 +73,7 @@ PROTOBUF_CONSTEXPR_VAR ::google::protobuf::internal::AuxillaryParseTableField
 };
 PROTOBUF_CONSTEXPR_VAR ::google::protobuf::internal::ParseTable const
     TableStruct::schema[] = {
+  { NULL, NULL, 0, -1, -1, false },
   { NULL, NULL, 0, -1, -1, false },
   { NULL, NULL, 0, -1, -1, false },
   { NULL, NULL, 0, -1, -1, false },
@@ -117,6 +120,7 @@ void TableStruct::Shutdown() {
   _UPRealPointValue_default_instance_.Shutdown();
   _FlowThreshold_default_instance_.Shutdown();
   _AlarmDataMsg_default_instance_.Shutdown();
+  _UpdateRuleFile_default_instance_.Shutdown();
   _RemoteControl_default_instance_.Shutdown();
   _RtdbMessage_default_instance_.Shutdown();
 }
@@ -145,6 +149,7 @@ void TableStruct::InitDefaultsImpl() {
   _UPRealPointValue_default_instance_.DefaultConstruct();
   _FlowThreshold_default_instance_.DefaultConstruct();
   _AlarmDataMsg_default_instance_.DefaultConstruct();
+  _UpdateRuleFile_default_instance_.DefaultConstruct();
   _RemoteControl_default_instance_.DefaultConstruct();
   _RtdbMessage_default_instance_.DefaultConstruct();
   _RtdbMessage_default_instance_.get_mutable()->logrequest_ = const_cast< ::LogRequest*>(
@@ -179,6 +184,8 @@ void TableStruct::InitDefaultsImpl() {
       ::UPRealPointValue::internal_default_instance());
   _RtdbMessage_default_instance_.get_mutable()->remotecontrol_ = const_cast< ::RemoteControl*>(
       ::RemoteControl::internal_default_instance());
+  _RtdbMessage_default_instance_.get_mutable()->updaterulefile_ = const_cast< ::UpdateRuleFile*>(
+      ::UpdateRuleFile::internal_default_instance());
 }
 
 void InitDefaults() {
@@ -223,6 +230,27 @@ bool PointValueType_IsValid(int value) {
   }
 }
 
+bool CtrlCmdType_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 1:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool CmdExecuteResult_IsValid(int value) {
+  switch (value) {
+    case 0:
+    case 1:
+    case 2:
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool RtdbMessageType_IsValid(int value) {
   switch (value) {
     case 0:
@@ -242,6 +270,7 @@ bool RtdbMessageType_IsValid(int value) {
     case 14:
     case 15:
     case 16:
+    case 17:
       return true;
     default:
       return false;
@@ -6686,6 +6715,13 @@ const int RealPointValue::kPointValueFieldNumber;
 const int RealPointValue::kPointAddrFieldNumber;
 const int RealPointValue::kValueTypeFieldNumber;
 const int RealPointValue::kChannelTypeFieldNumber;
+const int RealPointValue::kTimeValueFieldNumber;
+const int RealPointValue::kSourIpFieldNumber;
+const int RealPointValue::kDestIpFieldNumber;
+const int RealPointValue::kProtocolTypeFieldNumber;
+const int RealPointValue::kCtrlCmdTypeFieldNumber;
+const int RealPointValue::kExecuteResultFieldNumber;
+const int RealPointValue::kPcapFileNameFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 RealPointValue::RealPointValue()
@@ -6699,6 +6735,7 @@ RealPointValue::RealPointValue()
 RealPointValue::RealPointValue(const RealPointValue& from)
   : ::google::protobuf::MessageLite(),
       _internal_metadata_(NULL),
+      pcapfilename_(from.pcapfilename_),
       _cached_size_(0) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   channelname_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
@@ -6717,9 +6754,25 @@ RealPointValue::RealPointValue(const RealPointValue& from)
   if (from.pointaddr().size() > 0) {
     pointaddr_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.pointaddr_);
   }
+  timevalue_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.timevalue().size() > 0) {
+    timevalue_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.timevalue_);
+  }
+  sourip_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.sourip().size() > 0) {
+    sourip_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.sourip_);
+  }
+  destip_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.destip().size() > 0) {
+    destip_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.destip_);
+  }
+  protocoltype_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.protocoltype().size() > 0) {
+    protocoltype_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.protocoltype_);
+  }
   ::memcpy(&valuetype_, &from.valuetype_,
-    reinterpret_cast<char*>(&channeltype_) -
-    reinterpret_cast<char*>(&valuetype_) + sizeof(channeltype_));
+    reinterpret_cast<char*>(&executeresult_) -
+    reinterpret_cast<char*>(&valuetype_) + sizeof(executeresult_));
   // @@protoc_insertion_point(copy_constructor:RealPointValue)
 }
 
@@ -6728,8 +6781,12 @@ void RealPointValue::SharedCtor() {
   devicename_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointvalue_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointaddr_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-  ::memset(&valuetype_, 0, reinterpret_cast<char*>(&channeltype_) -
-    reinterpret_cast<char*>(&valuetype_) + sizeof(channeltype_));
+  timevalue_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  sourip_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  destip_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  protocoltype_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ::memset(&valuetype_, 0, reinterpret_cast<char*>(&executeresult_) -
+    reinterpret_cast<char*>(&valuetype_) + sizeof(executeresult_));
   _cached_size_ = 0;
 }
 
@@ -6743,6 +6800,10 @@ void RealPointValue::SharedDtor() {
   devicename_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointvalue_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointaddr_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  timevalue_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  sourip_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  destip_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  protocoltype_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
 
 void RealPointValue::SetCachedSize(int size) const {
@@ -6765,12 +6826,17 @@ RealPointValue* RealPointValue::New(::google::protobuf::Arena* arena) const {
 
 void RealPointValue::Clear() {
 // @@protoc_insertion_point(message_clear_start:RealPointValue)
+  pcapfilename_.Clear();
   channelname_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   devicename_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointvalue_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   pointaddr_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-  ::memset(&valuetype_, 0, reinterpret_cast<char*>(&channeltype_) -
-    reinterpret_cast<char*>(&valuetype_) + sizeof(channeltype_));
+  timevalue_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  sourip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  destip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  protocoltype_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ::memset(&valuetype_, 0, reinterpret_cast<char*>(&executeresult_) -
+    reinterpret_cast<char*>(&valuetype_) + sizeof(executeresult_));
 }
 
 bool RealPointValue::MergePartialFromCodedStream(
@@ -6876,6 +6942,117 @@ bool RealPointValue::MergePartialFromCodedStream(
         break;
       }
 
+      // string timeValue = 7;
+      case 7: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(58u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_timevalue()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->timevalue().data(), this->timevalue().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "RealPointValue.timeValue"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string sourIp = 8;
+      case 8: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(66u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_sourip()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->sourip().data(), this->sourip().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "RealPointValue.sourIp"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string destIp = 9;
+      case 9: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(74u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_destip()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->destip().data(), this->destip().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "RealPointValue.destIp"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string protocolType = 10;
+      case 10: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(82u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_protocoltype()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->protocoltype().data(), this->protocoltype().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "RealPointValue.protocolType"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .CtrlCmdType ctrlCmdType = 11;
+      case 11: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(88u)) {
+          int value;
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          set_ctrlcmdtype(static_cast< ::CtrlCmdType >(value));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // .CmdExecuteResult executeResult = 12;
+      case 12: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(96u)) {
+          int value;
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
+                 input, &value)));
+          set_executeresult(static_cast< ::CmdExecuteResult >(value));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // repeated string pcapFileName = 13;
+      case 13: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(106u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->add_pcapfilename()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->pcapfilename(this->pcapfilename_size() - 1).data(),
+            this->pcapfilename(this->pcapfilename_size() - 1).length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "RealPointValue.pcapFileName"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0 ||
@@ -6954,12 +7131,82 @@ void RealPointValue::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt32(6, this->channeltype(), output);
   }
 
+  // string timeValue = 7;
+  if (this->timevalue().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->timevalue().data(), this->timevalue().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "RealPointValue.timeValue");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      7, this->timevalue(), output);
+  }
+
+  // string sourIp = 8;
+  if (this->sourip().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->sourip().data(), this->sourip().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "RealPointValue.sourIp");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      8, this->sourip(), output);
+  }
+
+  // string destIp = 9;
+  if (this->destip().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->destip().data(), this->destip().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "RealPointValue.destIp");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      9, this->destip(), output);
+  }
+
+  // string protocolType = 10;
+  if (this->protocoltype().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->protocoltype().data(), this->protocoltype().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "RealPointValue.protocolType");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      10, this->protocoltype(), output);
+  }
+
+  // .CtrlCmdType ctrlCmdType = 11;
+  if (this->ctrlcmdtype() != 0) {
+    ::google::protobuf::internal::WireFormatLite::WriteEnum(
+      11, this->ctrlcmdtype(), output);
+  }
+
+  // .CmdExecuteResult executeResult = 12;
+  if (this->executeresult() != 0) {
+    ::google::protobuf::internal::WireFormatLite::WriteEnum(
+      12, this->executeresult(), output);
+  }
+
+  // repeated string pcapFileName = 13;
+  for (int i = 0, n = this->pcapfilename_size(); i < n; i++) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->pcapfilename(i).data(), this->pcapfilename(i).length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "RealPointValue.pcapFileName");
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      13, this->pcapfilename(i), output);
+  }
+
   // @@protoc_insertion_point(serialize_end:RealPointValue)
 }
 
 size_t RealPointValue::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:RealPointValue)
   size_t total_size = 0;
+
+  // repeated string pcapFileName = 13;
+  total_size += 1 *
+      ::google::protobuf::internal::FromIntSize(this->pcapfilename_size());
+  for (int i = 0, n = this->pcapfilename_size(); i < n; i++) {
+    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+      this->pcapfilename(i));
+  }
 
   // string channelName = 1;
   if (this->channelname().size() > 0) {
@@ -6989,6 +7236,34 @@ size_t RealPointValue::ByteSizeLong() const {
         this->pointaddr());
   }
 
+  // string timeValue = 7;
+  if (this->timevalue().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->timevalue());
+  }
+
+  // string sourIp = 8;
+  if (this->sourip().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->sourip());
+  }
+
+  // string destIp = 9;
+  if (this->destip().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->destip());
+  }
+
+  // string protocolType = 10;
+  if (this->protocoltype().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->protocoltype());
+  }
+
   // .PointValueType valueType = 5;
   if (this->valuetype() != 0) {
     total_size += 1 +
@@ -7000,6 +7275,18 @@ size_t RealPointValue::ByteSizeLong() const {
     total_size += 1 +
       ::google::protobuf::internal::WireFormatLite::Int32Size(
         this->channeltype());
+  }
+
+  // .CtrlCmdType ctrlCmdType = 11;
+  if (this->ctrlcmdtype() != 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::EnumSize(this->ctrlcmdtype());
+  }
+
+  // .CmdExecuteResult executeResult = 12;
+  if (this->executeresult() != 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::EnumSize(this->executeresult());
   }
 
   int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);
@@ -7021,6 +7308,7 @@ void RealPointValue::MergeFrom(const RealPointValue& from) {
   ::google::protobuf::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
+  pcapfilename_.MergeFrom(from.pcapfilename_);
   if (from.channelname().size() > 0) {
 
     channelname_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.channelname_);
@@ -7037,11 +7325,33 @@ void RealPointValue::MergeFrom(const RealPointValue& from) {
 
     pointaddr_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.pointaddr_);
   }
+  if (from.timevalue().size() > 0) {
+
+    timevalue_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.timevalue_);
+  }
+  if (from.sourip().size() > 0) {
+
+    sourip_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.sourip_);
+  }
+  if (from.destip().size() > 0) {
+
+    destip_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.destip_);
+  }
+  if (from.protocoltype().size() > 0) {
+
+    protocoltype_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.protocoltype_);
+  }
   if (from.valuetype() != 0) {
     set_valuetype(from.valuetype());
   }
   if (from.channeltype() != 0) {
     set_channeltype(from.channeltype());
+  }
+  if (from.ctrlcmdtype() != 0) {
+    set_ctrlcmdtype(from.ctrlcmdtype());
+  }
+  if (from.executeresult() != 0) {
+    set_executeresult(from.executeresult());
   }
 }
 
@@ -7061,12 +7371,19 @@ void RealPointValue::Swap(RealPointValue* other) {
   InternalSwap(other);
 }
 void RealPointValue::InternalSwap(RealPointValue* other) {
+  pcapfilename_.InternalSwap(&other->pcapfilename_);
   channelname_.Swap(&other->channelname_);
   devicename_.Swap(&other->devicename_);
   pointvalue_.Swap(&other->pointvalue_);
   pointaddr_.Swap(&other->pointaddr_);
+  timevalue_.Swap(&other->timevalue_);
+  sourip_.Swap(&other->sourip_);
+  destip_.Swap(&other->destip_);
+  protocoltype_.Swap(&other->protocoltype_);
   std::swap(valuetype_, other->valuetype_);
   std::swap(channeltype_, other->channeltype_);
+  std::swap(ctrlcmdtype_, other->ctrlcmdtype_);
+  std::swap(executeresult_, other->executeresult_);
   std::swap(_cached_size_, other->_cached_size_);
 }
 
@@ -7315,6 +7632,315 @@ void RealPointValue::set_channeltype(::google::protobuf::int32 value) {
   
   channeltype_ = value;
   // @@protoc_insertion_point(field_set:RealPointValue.channelType)
+}
+
+// string timeValue = 7;
+void RealPointValue::clear_timevalue() {
+  timevalue_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& RealPointValue::timevalue() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.timeValue)
+  return timevalue_.GetNoArena();
+}
+void RealPointValue::set_timevalue(const ::std::string& value) {
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.timeValue)
+}
+#if LANG_CXX11
+void RealPointValue::set_timevalue(::std::string&& value) {
+  
+  timevalue_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.timeValue)
+}
+#endif
+void RealPointValue::set_timevalue(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.timeValue)
+}
+void RealPointValue::set_timevalue(const char* value, size_t size) {
+  
+  timevalue_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.timeValue)
+}
+::std::string* RealPointValue::mutable_timevalue() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.timeValue)
+  return timevalue_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* RealPointValue::release_timevalue() {
+  // @@protoc_insertion_point(field_release:RealPointValue.timeValue)
+  
+  return timevalue_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void RealPointValue::set_allocated_timevalue(::std::string* timevalue) {
+  if (timevalue != NULL) {
+    
+  } else {
+    
+  }
+  timevalue_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), timevalue);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.timeValue)
+}
+
+// string sourIp = 8;
+void RealPointValue::clear_sourip() {
+  sourip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& RealPointValue::sourip() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.sourIp)
+  return sourip_.GetNoArena();
+}
+void RealPointValue::set_sourip(const ::std::string& value) {
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.sourIp)
+}
+#if LANG_CXX11
+void RealPointValue::set_sourip(::std::string&& value) {
+  
+  sourip_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.sourIp)
+}
+#endif
+void RealPointValue::set_sourip(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.sourIp)
+}
+void RealPointValue::set_sourip(const char* value, size_t size) {
+  
+  sourip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.sourIp)
+}
+::std::string* RealPointValue::mutable_sourip() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.sourIp)
+  return sourip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* RealPointValue::release_sourip() {
+  // @@protoc_insertion_point(field_release:RealPointValue.sourIp)
+  
+  return sourip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void RealPointValue::set_allocated_sourip(::std::string* sourip) {
+  if (sourip != NULL) {
+    
+  } else {
+    
+  }
+  sourip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), sourip);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.sourIp)
+}
+
+// string destIp = 9;
+void RealPointValue::clear_destip() {
+  destip_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& RealPointValue::destip() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.destIp)
+  return destip_.GetNoArena();
+}
+void RealPointValue::set_destip(const ::std::string& value) {
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.destIp)
+}
+#if LANG_CXX11
+void RealPointValue::set_destip(::std::string&& value) {
+  
+  destip_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.destIp)
+}
+#endif
+void RealPointValue::set_destip(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.destIp)
+}
+void RealPointValue::set_destip(const char* value, size_t size) {
+  
+  destip_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.destIp)
+}
+::std::string* RealPointValue::mutable_destip() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.destIp)
+  return destip_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* RealPointValue::release_destip() {
+  // @@protoc_insertion_point(field_release:RealPointValue.destIp)
+  
+  return destip_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void RealPointValue::set_allocated_destip(::std::string* destip) {
+  if (destip != NULL) {
+    
+  } else {
+    
+  }
+  destip_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), destip);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.destIp)
+}
+
+// string protocolType = 10;
+void RealPointValue::clear_protocoltype() {
+  protocoltype_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& RealPointValue::protocoltype() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.protocolType)
+  return protocoltype_.GetNoArena();
+}
+void RealPointValue::set_protocoltype(const ::std::string& value) {
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:RealPointValue.protocolType)
+}
+#if LANG_CXX11
+void RealPointValue::set_protocoltype(::std::string&& value) {
+  
+  protocoltype_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:RealPointValue.protocolType)
+}
+#endif
+void RealPointValue::set_protocoltype(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:RealPointValue.protocolType)
+}
+void RealPointValue::set_protocoltype(const char* value, size_t size) {
+  
+  protocoltype_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.protocolType)
+}
+::std::string* RealPointValue::mutable_protocoltype() {
+  
+  // @@protoc_insertion_point(field_mutable:RealPointValue.protocolType)
+  return protocoltype_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* RealPointValue::release_protocoltype() {
+  // @@protoc_insertion_point(field_release:RealPointValue.protocolType)
+  
+  return protocoltype_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void RealPointValue::set_allocated_protocoltype(::std::string* protocoltype) {
+  if (protocoltype != NULL) {
+    
+  } else {
+    
+  }
+  protocoltype_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), protocoltype);
+  // @@protoc_insertion_point(field_set_allocated:RealPointValue.protocolType)
+}
+
+// .CtrlCmdType ctrlCmdType = 11;
+void RealPointValue::clear_ctrlcmdtype() {
+  ctrlcmdtype_ = 0;
+}
+::CtrlCmdType RealPointValue::ctrlcmdtype() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.ctrlCmdType)
+  return static_cast< ::CtrlCmdType >(ctrlcmdtype_);
+}
+void RealPointValue::set_ctrlcmdtype(::CtrlCmdType value) {
+  
+  ctrlcmdtype_ = value;
+  // @@protoc_insertion_point(field_set:RealPointValue.ctrlCmdType)
+}
+
+// .CmdExecuteResult executeResult = 12;
+void RealPointValue::clear_executeresult() {
+  executeresult_ = 0;
+}
+::CmdExecuteResult RealPointValue::executeresult() const {
+  // @@protoc_insertion_point(field_get:RealPointValue.executeResult)
+  return static_cast< ::CmdExecuteResult >(executeresult_);
+}
+void RealPointValue::set_executeresult(::CmdExecuteResult value) {
+  
+  executeresult_ = value;
+  // @@protoc_insertion_point(field_set:RealPointValue.executeResult)
+}
+
+// repeated string pcapFileName = 13;
+int RealPointValue::pcapfilename_size() const {
+  return pcapfilename_.size();
+}
+void RealPointValue::clear_pcapfilename() {
+  pcapfilename_.Clear();
+}
+const ::std::string& RealPointValue::pcapfilename(int index) const {
+  // @@protoc_insertion_point(field_get:RealPointValue.pcapFileName)
+  return pcapfilename_.Get(index);
+}
+::std::string* RealPointValue::mutable_pcapfilename(int index) {
+  // @@protoc_insertion_point(field_mutable:RealPointValue.pcapFileName)
+  return pcapfilename_.Mutable(index);
+}
+void RealPointValue::set_pcapfilename(int index, const ::std::string& value) {
+  // @@protoc_insertion_point(field_set:RealPointValue.pcapFileName)
+  pcapfilename_.Mutable(index)->assign(value);
+}
+#if LANG_CXX11
+void RealPointValue::set_pcapfilename(int index, ::std::string&& value) {
+  // @@protoc_insertion_point(field_set:RealPointValue.pcapFileName)
+  pcapfilename_.Mutable(index)->assign(std::move(value));
+}
+#endif
+void RealPointValue::set_pcapfilename(int index, const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  pcapfilename_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:RealPointValue.pcapFileName)
+}
+void RealPointValue::set_pcapfilename(int index, const char* value, size_t size) {
+  pcapfilename_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:RealPointValue.pcapFileName)
+}
+::std::string* RealPointValue::add_pcapfilename() {
+  // @@protoc_insertion_point(field_add_mutable:RealPointValue.pcapFileName)
+  return pcapfilename_.Add();
+}
+void RealPointValue::add_pcapfilename(const ::std::string& value) {
+  pcapfilename_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:RealPointValue.pcapFileName)
+}
+#if LANG_CXX11
+void RealPointValue::add_pcapfilename(::std::string&& value) {
+  pcapfilename_.Add(std::move(value));
+  // @@protoc_insertion_point(field_add:RealPointValue.pcapFileName)
+}
+#endif
+void RealPointValue::add_pcapfilename(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  pcapfilename_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:RealPointValue.pcapFileName)
+}
+void RealPointValue::add_pcapfilename(const char* value, size_t size) {
+  pcapfilename_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:RealPointValue.pcapFileName)
+}
+const ::google::protobuf::RepeatedPtrField< ::std::string>&
+RealPointValue::pcapfilename() const {
+  // @@protoc_insertion_point(field_list:RealPointValue.pcapFileName)
+  return pcapfilename_;
+}
+::google::protobuf::RepeatedPtrField< ::std::string>*
+RealPointValue::mutable_pcapfilename() {
+  // @@protoc_insertion_point(field_mutable_list:RealPointValue.pcapFileName)
+  return &pcapfilename_;
 }
 
 #endif  // PROTOBUF_INLINE_NOT_IN_HEADERS
@@ -11096,6 +11722,400 @@ void AlarmDataMsg::set_allocated_filename(::std::string* filename) {
 // ===================================================================
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
+const int UpdateRuleFile::kTimeFieldNumber;
+const int UpdateRuleFile::kFileNameFieldNumber;
+const int UpdateRuleFile::kFileTypeFieldNumber;
+#endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
+
+UpdateRuleFile::UpdateRuleFile()
+  : ::google::protobuf::MessageLite(), _internal_metadata_(NULL) {
+  if (GOOGLE_PREDICT_TRUE(this != internal_default_instance())) {
+    protobuf_RtdbMessage_2eproto::InitDefaults();
+  }
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:UpdateRuleFile)
+}
+UpdateRuleFile::UpdateRuleFile(const UpdateRuleFile& from)
+  : ::google::protobuf::MessageLite(),
+      _internal_metadata_(NULL),
+      _cached_size_(0) {
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  time_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.time().size() > 0) {
+    time_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.time_);
+  }
+  filename_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.filename().size() > 0) {
+    filename_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.filename_);
+  }
+  filetype_ = from.filetype_;
+  // @@protoc_insertion_point(copy_constructor:UpdateRuleFile)
+}
+
+void UpdateRuleFile::SharedCtor() {
+  time_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  filename_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  filetype_ = 0;
+  _cached_size_ = 0;
+}
+
+UpdateRuleFile::~UpdateRuleFile() {
+  // @@protoc_insertion_point(destructor:UpdateRuleFile)
+  SharedDtor();
+}
+
+void UpdateRuleFile::SharedDtor() {
+  time_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  filename_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+
+void UpdateRuleFile::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const UpdateRuleFile& UpdateRuleFile::default_instance() {
+  protobuf_RtdbMessage_2eproto::InitDefaults();
+  return *internal_default_instance();
+}
+
+UpdateRuleFile* UpdateRuleFile::New(::google::protobuf::Arena* arena) const {
+  UpdateRuleFile* n = new UpdateRuleFile;
+  if (arena != NULL) {
+    arena->Own(n);
+  }
+  return n;
+}
+
+void UpdateRuleFile::Clear() {
+// @@protoc_insertion_point(message_clear_start:UpdateRuleFile)
+  time_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  filename_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  filetype_ = 0;
+}
+
+bool UpdateRuleFile::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!GOOGLE_PREDICT_TRUE(EXPRESSION)) goto failure
+  ::google::protobuf::uint32 tag;
+  // @@protoc_insertion_point(parse_start:UpdateRuleFile)
+  for (;;) {
+    ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoffNoLastTag(127u);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // string time = 1;
+      case 1: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(10u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_time()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->time().data(), this->time().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "UpdateRuleFile.time"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // string fileName = 2;
+      case 2: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(18u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_filename()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->filename().data(), this->filename().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "UpdateRuleFile.fileName"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // int32 fileType = 3;
+      case 3: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(24u)) {
+
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &filetype_)));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0 ||
+            ::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          goto success;
+        }
+        DO_(::google::protobuf::internal::WireFormatLite::SkipField(input, tag));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:UpdateRuleFile)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:UpdateRuleFile)
+  return false;
+#undef DO_
+}
+
+void UpdateRuleFile::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:UpdateRuleFile)
+  ::google::protobuf::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // string time = 1;
+  if (this->time().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->time().data(), this->time().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "UpdateRuleFile.time");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      1, this->time(), output);
+  }
+
+  // string fileName = 2;
+  if (this->filename().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->filename().data(), this->filename().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "UpdateRuleFile.fileName");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      2, this->filename(), output);
+  }
+
+  // int32 fileType = 3;
+  if (this->filetype() != 0) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->filetype(), output);
+  }
+
+  // @@protoc_insertion_point(serialize_end:UpdateRuleFile)
+}
+
+size_t UpdateRuleFile::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:UpdateRuleFile)
+  size_t total_size = 0;
+
+  // string time = 1;
+  if (this->time().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->time());
+  }
+
+  // string fileName = 2;
+  if (this->filename().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->filename());
+  }
+
+  // int32 fileType = 3;
+  if (this->filetype() != 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::Int32Size(
+        this->filetype());
+  }
+
+  int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = cached_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void UpdateRuleFile::CheckTypeAndMergeFrom(
+    const ::google::protobuf::MessageLite& from) {
+  MergeFrom(*::google::protobuf::down_cast<const UpdateRuleFile*>(&from));
+}
+
+void UpdateRuleFile::MergeFrom(const UpdateRuleFile& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:UpdateRuleFile)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom(from._internal_metadata_);
+  ::google::protobuf::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (from.time().size() > 0) {
+
+    time_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.time_);
+  }
+  if (from.filename().size() > 0) {
+
+    filename_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.filename_);
+  }
+  if (from.filetype() != 0) {
+    set_filetype(from.filetype());
+  }
+}
+
+void UpdateRuleFile::CopyFrom(const UpdateRuleFile& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:UpdateRuleFile)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool UpdateRuleFile::IsInitialized() const {
+  return true;
+}
+
+void UpdateRuleFile::Swap(UpdateRuleFile* other) {
+  if (other == this) return;
+  InternalSwap(other);
+}
+void UpdateRuleFile::InternalSwap(UpdateRuleFile* other) {
+  time_.Swap(&other->time_);
+  filename_.Swap(&other->filename_);
+  std::swap(filetype_, other->filetype_);
+  std::swap(_cached_size_, other->_cached_size_);
+}
+
+::std::string UpdateRuleFile::GetTypeName() const {
+  return "UpdateRuleFile";
+}
+
+#if PROTOBUF_INLINE_NOT_IN_HEADERS
+// UpdateRuleFile
+
+// string time = 1;
+void UpdateRuleFile::clear_time() {
+  time_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& UpdateRuleFile::time() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.time)
+  return time_.GetNoArena();
+}
+void UpdateRuleFile::set_time(const ::std::string& value) {
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.time)
+}
+#if LANG_CXX11
+void UpdateRuleFile::set_time(::std::string&& value) {
+  
+  time_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:UpdateRuleFile.time)
+}
+#endif
+void UpdateRuleFile::set_time(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:UpdateRuleFile.time)
+}
+void UpdateRuleFile::set_time(const char* value, size_t size) {
+  
+  time_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:UpdateRuleFile.time)
+}
+::std::string* UpdateRuleFile::mutable_time() {
+  
+  // @@protoc_insertion_point(field_mutable:UpdateRuleFile.time)
+  return time_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* UpdateRuleFile::release_time() {
+  // @@protoc_insertion_point(field_release:UpdateRuleFile.time)
+  
+  return time_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void UpdateRuleFile::set_allocated_time(::std::string* time) {
+  if (time != NULL) {
+    
+  } else {
+    
+  }
+  time_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), time);
+  // @@protoc_insertion_point(field_set_allocated:UpdateRuleFile.time)
+}
+
+// string fileName = 2;
+void UpdateRuleFile::clear_filename() {
+  filename_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& UpdateRuleFile::filename() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.fileName)
+  return filename_.GetNoArena();
+}
+void UpdateRuleFile::set_filename(const ::std::string& value) {
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.fileName)
+}
+#if LANG_CXX11
+void UpdateRuleFile::set_filename(::std::string&& value) {
+  
+  filename_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:UpdateRuleFile.fileName)
+}
+#endif
+void UpdateRuleFile::set_filename(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:UpdateRuleFile.fileName)
+}
+void UpdateRuleFile::set_filename(const char* value, size_t size) {
+  
+  filename_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:UpdateRuleFile.fileName)
+}
+::std::string* UpdateRuleFile::mutable_filename() {
+  
+  // @@protoc_insertion_point(field_mutable:UpdateRuleFile.fileName)
+  return filename_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* UpdateRuleFile::release_filename() {
+  // @@protoc_insertion_point(field_release:UpdateRuleFile.fileName)
+  
+  return filename_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void UpdateRuleFile::set_allocated_filename(::std::string* filename) {
+  if (filename != NULL) {
+    
+  } else {
+    
+  }
+  filename_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), filename);
+  // @@protoc_insertion_point(field_set_allocated:UpdateRuleFile.fileName)
+}
+
+// int32 fileType = 3;
+void UpdateRuleFile::clear_filetype() {
+  filetype_ = 0;
+}
+::google::protobuf::int32 UpdateRuleFile::filetype() const {
+  // @@protoc_insertion_point(field_get:UpdateRuleFile.fileType)
+  return filetype_;
+}
+void UpdateRuleFile::set_filetype(::google::protobuf::int32 value) {
+  
+  filetype_ = value;
+  // @@protoc_insertion_point(field_set:UpdateRuleFile.fileType)
+}
+
+#endif  // PROTOBUF_INLINE_NOT_IN_HEADERS
+
+// ===================================================================
+
+#if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int RemoteControl::kProtocolNameFieldNumber;
 const int RemoteControl::kTimeStampFieldNumber;
 const int RemoteControl::kSrcIpFieldNumber;
@@ -12336,6 +13356,7 @@ const int RtdbMessage::kFlowThresholdFieldNumber;
 const int RtdbMessage::kAlarmDataMsgFieldNumber;
 const int RtdbMessage::kUpRealPointValueFieldNumber;
 const int RtdbMessage::kRemoteControlFieldNumber;
+const int RtdbMessage::kUpdateRuleFileFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 RtdbMessage::RtdbMessage()
@@ -12431,6 +13452,11 @@ RtdbMessage::RtdbMessage(const RtdbMessage& from)
   } else {
     remotecontrol_ = NULL;
   }
+  if (from.has_updaterulefile()) {
+    updaterulefile_ = new ::UpdateRuleFile(*from.updaterulefile_);
+  } else {
+    updaterulefile_ = NULL;
+  }
   ::memcpy(&fromobject_, &from.fromobject_,
     reinterpret_cast<char*>(&transactionid_) -
     reinterpret_cast<char*>(&fromobject_) + sizeof(transactionid_));
@@ -12496,6 +13522,9 @@ void RtdbMessage::SharedDtor() {
   }
   if (this != internal_default_instance()) {
     delete remotecontrol_;
+  }
+  if (this != internal_default_instance()) {
+    delete updaterulefile_;
   }
 }
 
@@ -12583,6 +13612,10 @@ void RtdbMessage::Clear() {
     delete remotecontrol_;
   }
   remotecontrol_ = NULL;
+  if (GetArenaNoVirtual() == NULL && updaterulefile_ != NULL) {
+    delete updaterulefile_;
+  }
+  updaterulefile_ = NULL;
   ::memset(&fromobject_, 0, reinterpret_cast<char*>(&transactionid_) -
     reinterpret_cast<char*>(&fromobject_) + sizeof(transactionid_));
 }
@@ -12876,6 +13909,18 @@ bool RtdbMessage::MergePartialFromCodedStream(
         break;
       }
 
+      // .UpdateRuleFile updateRuleFile = 24;
+      case 24: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(194u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+               input, mutable_updaterulefile()));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
       default: {
       handle_unusual:
         if (tag == 0 ||
@@ -13032,6 +14077,12 @@ void RtdbMessage::SerializeWithCachedSizes(
       23, *this->remotecontrol_, output);
   }
 
+  // .UpdateRuleFile updateRuleFile = 24;
+  if (this->has_updaterulefile()) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessage(
+      24, *this->updaterulefile_, output);
+  }
+
   // @@protoc_insertion_point(serialize_end:RtdbMessage)
 }
 
@@ -13151,6 +14202,13 @@ size_t RtdbMessage::ByteSizeLong() const {
         *this->remotecontrol_);
   }
 
+  // .UpdateRuleFile updateRuleFile = 24;
+  if (this->has_updaterulefile()) {
+    total_size += 2 +
+      ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+        *this->updaterulefile_);
+  }
+
   // int32 fromObject = 1;
   if (this->fromobject() != 0) {
     total_size += 1 +
@@ -13257,6 +14315,9 @@ void RtdbMessage::MergeFrom(const RtdbMessage& from) {
   if (from.has_remotecontrol()) {
     mutable_remotecontrol()->::RemoteControl::MergeFrom(from.remotecontrol());
   }
+  if (from.has_updaterulefile()) {
+    mutable_updaterulefile()->::UpdateRuleFile::MergeFrom(from.updaterulefile());
+  }
   if (from.fromobject() != 0) {
     set_fromobject(from.fromobject());
   }
@@ -13309,6 +14370,7 @@ void RtdbMessage::InternalSwap(RtdbMessage* other) {
   std::swap(alarmdatamsg_, other->alarmdatamsg_);
   std::swap(uprealpointvalue_, other->uprealpointvalue_);
   std::swap(remotecontrol_, other->remotecontrol_);
+  std::swap(updaterulefile_, other->updaterulefile_);
   std::swap(fromobject_, other->fromobject_);
   std::swap(toobject_, other->toobject_);
   std::swap(fromobjecttype_, other->fromobjecttype_);
@@ -14031,6 +15093,45 @@ void RtdbMessage::set_allocated_remotecontrol(::RemoteControl* remotecontrol) {
     
   }
   // @@protoc_insertion_point(field_set_allocated:RtdbMessage.remoteControl)
+}
+
+// .UpdateRuleFile updateRuleFile = 24;
+bool RtdbMessage::has_updaterulefile() const {
+  return this != internal_default_instance() && updaterulefile_ != NULL;
+}
+void RtdbMessage::clear_updaterulefile() {
+  if (GetArenaNoVirtual() == NULL && updaterulefile_ != NULL) delete updaterulefile_;
+  updaterulefile_ = NULL;
+}
+const ::UpdateRuleFile& RtdbMessage::updaterulefile() const {
+  // @@protoc_insertion_point(field_get:RtdbMessage.updateRuleFile)
+  return updaterulefile_ != NULL ? *updaterulefile_
+                         : *::UpdateRuleFile::internal_default_instance();
+}
+::UpdateRuleFile* RtdbMessage::mutable_updaterulefile() {
+  
+  if (updaterulefile_ == NULL) {
+    updaterulefile_ = new ::UpdateRuleFile;
+  }
+  // @@protoc_insertion_point(field_mutable:RtdbMessage.updateRuleFile)
+  return updaterulefile_;
+}
+::UpdateRuleFile* RtdbMessage::release_updaterulefile() {
+  // @@protoc_insertion_point(field_release:RtdbMessage.updateRuleFile)
+  
+  ::UpdateRuleFile* temp = updaterulefile_;
+  updaterulefile_ = NULL;
+  return temp;
+}
+void RtdbMessage::set_allocated_updaterulefile(::UpdateRuleFile* updaterulefile) {
+  delete updaterulefile_;
+  updaterulefile_ = updaterulefile;
+  if (updaterulefile) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_set_allocated:RtdbMessage.updateRuleFile)
 }
 
 #endif  // PROTOBUF_INLINE_NOT_IN_HEADERS

@@ -8,6 +8,7 @@
 #ifndef READPCAPFILE_H_
 #define READPCAPFILE_H_
 
+#include <stdio.h>
 #include <pcap.h>
 #include <boost/filesystem.hpp>
 #include <string>
@@ -24,6 +25,8 @@ public:
 	bool openPcapFile(string filePath);
 
 	int pcapNextEx(struct pcap_pkthdr **, const u_char **);
+
+	void closePcapFile();
 private:
 	pcap_t *fp_;
 	char errbuf_[ERRBUF_SIZE];

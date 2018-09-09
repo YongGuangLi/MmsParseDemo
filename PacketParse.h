@@ -60,12 +60,12 @@ typedef struct
 	string dstIp;
 	uint32_t invokeId;
 	ServiceType serviceType;
-	vector<string> vecDomainName;
-	vector<string> vecItemName;
+	vector<string> vecDomainName;        //域名   变量列表ListofVariable由一个或多个变量组成，客户端能够在一次write服务中访问多个变量，但是程序中默认一次只write一个变量
+	vector<string> vecItemName;          //项目名  域名，项目名组合起来就是代表受控对象的变量名
 	MmsValue*  mmsValue;
-	vector<int> vecResponseResult;
-	uint64_t packetTimeStamp;
-
+	vector<int> vecResponseResult;       //遥控回复结果
+	uint64_t packetTimeStamp;            //报文时标
+	string pcapFile;                     //报文文件名
 }stMmsContent;
 
 
@@ -74,15 +74,15 @@ public:
 	PacketParse();
 	virtual ~PacketParse();
 
-	void dissectPacket(struct pcap_pkthdr *pkthdr, u_char *packet);
+	void dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_char *packet);
 
 	int dissectEthernet(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);
 
 	int dissectIpHeader(struct pcap_pkthdr *pkthdr, u_char *packet, int offset, stMmsContent *mmsContent);
 
 	int dissectTcpHeader(struct pcap_pkthdr *pkthdr, u_char *packet, int offset, stMmsContent *mmsContent);
-
-	int dissectTPKT(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);        //返回应用数据长度
+	//返回应用数据长度
+	int dissectTPKT(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);
 
 	int dissectCOTP(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);
 
@@ -99,23 +99,30 @@ public:
 	void SetUnConfirmedPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent);
 
 public:
-	void analysisMmsContent(stMmsContent mmsContent);                                //分析MMS报文内容
+	//分析MMS报文内容
+	void analysisMmsContent(stMmsContent mmsContent);
 
-	void analysisServiceRequestWrite(stMmsContent mmsContent);                       //分析遥控请求
+	char* getMmsValueUtcTime(MmsValue* mmsValue, char* buffer, int bufferSize);
+	//分析遥控请求
+	void analysisServiceRequestWrite(stMmsContent mmsContent);
+	//分析遥控回复
+	void analysisServiceResponseWrite(stMmsContent mmsContent);
+	//获取控制值
+	char* getControlValue(MmsValue* mmsValue, char* buffer, int bufferSize);
+	//通过redis发布遥控信息
+	int publishRemoteControl(stMmsContent mmsContent, string ctrlObject, string ctrlValue, int ctrlCmdType, int ctrlResult);
 
-	void analysisServiceResponseWrite(stMmsContent mmsContent);                      //分析遥控回复
-
-	void analysisVaribleList(stMmsContent mmsContent);                               //分析有名变量列表
-
+	//分析有名变量列表
+	void analysisVaribleList(stMmsContent mmsContent);
+	//获取实时点值类型
 	PointValueType getPointValueType(MmsValue*  mmsValue);
-
-	char* getMmsValueUtcTime(MmsValue*  mmsValue, char* buffer, int bufferSize);
-
-	int publishPointValue(string fcda, MmsValue*  fcdaMmsValue);
+	//通过redis发布实时点值
+	int publishPointValue(stMmsContent mmsContent, string fcda, MmsValue*  fcdaMmsValue);
 
 	void judgeRemoteControl(stMmsContent mmsContent);
 
 public:
+	//因为遥控请求和遥控回复的InvokeId相同，通过InvokeId获取遥控请求对象
 	stMmsContent getMmsContentByInvokeId(uint32_t);
 
 	void run();                                        //处理解析完成的报文内容
@@ -133,8 +140,6 @@ private:
 
 	RedisHelper* redisHelper;
 	RedisHelper *heatRedisHelper;                 //发送心跳 redis
-
-	MysqlHelper mysqlHelper;
 
 	SemaphoreQueue<stMmsContent> queMmsContent;
 

@@ -13,15 +13,6 @@ PacketParse::PacketParse() {
 
 	start();
 
-	if(mysqlHelper.connect(SingletonConfig->getMysqlIp(), SingletonConfig->getMysqlPort(), SingletonConfig->getMysqlDbName(), SingletonConfig->getMysqlUser(), SingletonConfig->getMysqlPassWd()))
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Mysql Connect Success:" + SingletonConfig->getMysqlIp());
-	}
-	else
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Mysql Connect Failure:" + SingletonConfig->getMysqlIp());
-	}
-
 	if(dataSetModel.load(SingletonConfig->getDatasetFilePath()))
 	{
 		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load datasetfile Success:" + SingletonConfig->getDatasetFilePath());
@@ -38,7 +29,7 @@ PacketParse::~PacketParse() {
 	// TODO Auto-generated destructor stub
 }
 
-void PacketParse::dissectPacket(struct pcap_pkthdr *pkthdr, u_char *packet)
+void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_char *packet)
 {
 	stMmsContent mmsContent;
 	mmsContent.mmsValue = 0;      //需要赋值为空，否则第二次定义值不会为空
@@ -47,6 +38,7 @@ void PacketParse::dissectPacket(struct pcap_pkthdr *pkthdr, u_char *packet)
 	mmsContent.iphdr = 0;
 	mmsContent.tcphdr = 0;
 	mmsContent.packetTimeStamp = pkthdr->ts.tv_sec * 1000 + pkthdr->ts.tv_usec;
+	mmsContent.pcapFile = pcapfile;
 
 	int offset = 0;
 	int type = dissectEthernet(pkthdr, packet, offset);
@@ -198,9 +190,9 @@ int PacketParse::dissectMmsContent(struct pcap_pkthdr *pkthdr, u_char *packet, i
 void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent)
 {
 	mmsContent->invokeId = mmsClient_getInvokeId(&mmsPdu->choice.confirmedResponsePdu);  //#include "mms_client_internal.h" 加了extern "C" 否则会找不到定义
-	//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
 
-	if (ConfirmedServiceRequest_PR_read == mmsPdu->choice.confirmedRequestPdu.confirmedServiceRequest.present)  //read
+	if (ConfirmedServiceRequest_PR_read == mmsPdu->choice.confirmedRequestPdu.confirmedServiceRequest.present)  //read     只解析报文，后续没有处理
 	{
 		mmsContent->serviceType = confirmedServiceRequestRead;
 
@@ -229,7 +221,6 @@ void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *m
 
 		WriteRequest_t writeRequest = mmsPdu->choice.confirmedRequestPdu.confirmedServiceRequest.choice.write;
 		VariableAccessSpecification__listOfVariable listOfVariable = writeRequest.variableAccessSpecification.choice.listOfVariable;
-
 		if(listOfVariable.list.count >= 1)                                                        //遥控一次只改一个值
 		{
 			if(VariableSpecification_PR_name == listOfVariable.list.array[0]->variableSpecification.present)
@@ -239,15 +230,14 @@ void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *m
 					ObjectName__domainspecific objDomainSpc = listOfVariable.list.array[0]->variableSpecification.choice.name.choice.domainspecific;
 					mmsContent->vecDomainName.push_back((char*)objDomainSpc.domainId.buf);
 					mmsContent->vecItemName.push_back((char*)objDomainSpc.itemId.buf);
-
-					//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("ObjectName:") + (char*)objDomainSpc.domainId.buf + "/" + (char*)objDomainSpc.itemId.buf);
 				}
 			}
 		}
-		if(writeRequest.listOfData.list.count >= 1)                                               //遥控一次只改一个值
+
+		if(writeRequest.listOfData.list.count >= 1)
 		{
 			MmsValue* value = mmsMsg_parseDataElement(writeRequest.listOfData.list.array[0]);
-			mmsContent->mmsValue = value;
+			mmsContent->mmsValue = value;                 //控制详细数据，以断路器遥控为例，true代表合闸，false分闸
 		}
 	}
 };
@@ -255,9 +245,9 @@ void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *m
 void PacketParse::SetConfirmedResponsePduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent)
 {
 	mmsContent->invokeId = mmsClient_getInvokeId(&mmsPdu->choice.confirmedResponsePdu);
-	//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
 
-	if (ConfirmedServiceResponse_PR_read == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)          	//read
+	if (ConfirmedServiceResponse_PR_read == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)          	//read  只解析报文，后续没有处理
 	{
 		mmsContent->serviceType = confirmedServiceResponseRead;
 
@@ -266,7 +256,7 @@ void PacketParse::SetConfirmedResponsePduResult(MmsPdu_t* mmsPdu, stMmsContent *
 		MmsValue* value = mmsClient_parseListOfAccessResults(readResponse.listOfAccessResult.list.array, elementCount, true);
 		mmsContent->mmsValue = value;
 	}
-	else if(ConfirmedServiceResponse_PR_write == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)  	//遥控回复是枚举类型    成功或者失败
+	else if(ConfirmedServiceResponse_PR_write == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)     //遥控回复是枚举类型    成功或者失败
 	{
 		mmsContent->serviceType = confirmedServiceResponseWrite;
 
@@ -363,63 +353,116 @@ void PacketParse::analysisMmsContent(stMmsContent mmsContent)
 	MmsValue_deleteIfNotNull(mmsContent.mmsValue);
 }
 
-void PacketParse::analysisServiceRequestWrite(stMmsContent mmsContent)                      //分析遥控请求
+
+char* PacketParse::getMmsValueUtcTime(MmsValue*  mmsValue, char* buffer, int bufferSize)
+{
+	int elementCount = MmsValue_getArraySize(mmsValue);
+	for(int i = 0; i < elementCount; ++i)
+	{
+		MmsValue*  value = MmsValue_getElement(mmsValue, i);
+
+		if(MMS_UTC_TIME == MmsValue_getType(value))
+		{
+			MmsValue_printToBuffer(value, buffer, bufferSize);
+		}
+	}
+	return buffer;
+}
+
+
+//分析遥控Request
+void PacketParse::analysisServiceRequestWrite(stMmsContent mmsContent)
 {
 	mapInvokeIdMmsContent.insert(make_pair(mmsContent.invokeId, mmsContent));
 
-	string pointName = mmsContent.vecDomainName.at(0) + "/" + mmsContent.vecItemName.at(0);    //一般一次只遥控选择一个点
-	if(pointName.find("SBOw") == string::npos && pointName.find("Oper") == string::npos)
+	string ctrlObject = mmsContent.vecDomainName.at(0) + "/" + mmsContent.vecItemName.at(0);     //一般一次只遥控一个点
+	if(ctrlObject.find("SBOw") == string::npos && ctrlObject.find("Oper") == string::npos)       //只判断遥控选择和遥控执行的Request
 		return;
 
+	//遥控请求带时标
 	char utcTime[64] = {0};
 	getMmsValueUtcTime(mmsContent.mmsValue, utcTime, 64);
 
-	int sbo = pointName.find("SBOw") != string::npos ? 1 : 0;   //报文类型 0 执行  1 选择
+	int ctrlCmdType = ctrlObject.find("SBOw") != string::npos ? 0 : 1;    //报文类型 0:选择  1:执行
 
-	string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
-						"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
-						.append("('iec61850").append("','").append(utcTime).append("','")
-						.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
-						.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
-						.append(pointName).append("','").append("").append("',")
-						.append("0").append(",").append(boost::lexical_cast<string>(sbo)).append(")");
+	char ctrlValue[64] = {0};
+	getControlValue(mmsContent.mmsValue, ctrlValue, 64);
 
-	mysqlHelper.execSql(sql);
+	int ctrlResult = 0;  //Request没有控制结果，以0表示Requset
+
+	publishRemoteControl(mmsContent, ctrlObject, ctrlValue, ctrlCmdType, ctrlResult);
 }
 
+//分析遥控Respnse
 void PacketParse::analysisServiceResponseWrite(stMmsContent mmsContent)
 {
-	stMmsContent requestMmmsContent = getMmsContentByInvokeId(mmsContent.invokeId);              //通过invokeId获取之前request的详细数据
+	stMmsContent requestMmmsContent = getMmsContentByInvokeId(mmsContent.invokeId);              //通过invokeId获取之前request的详细数据，因为Respnse只有结果，遥控点名在Request报文中
 
-	string pointName = requestMmmsContent.vecDomainName.at(0) + "/" + requestMmmsContent.vecItemName.at(0);    //一般一次只遥控选择一个点
+	if(requestMmmsContent.vecDomainName.size() < 1 || requestMmmsContent.vecItemName.size() < 1)
+	{
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO,"invokeId:" + boost::lexical_cast<string>(mmsContent.invokeId) + " not Request");
+		return;
+	}
 
-	if(pointName.find("SBOw") == string::npos && pointName.find("Oper") == string::npos)
+	string ctrlObject = requestMmmsContent.vecDomainName.at(0) + "/" + requestMmmsContent.vecItemName.at(0);  //一般一次只遥控一个点
+	if(ctrlObject.find("SBOw") == string::npos && ctrlObject.find("Oper") == string::npos)                    //只判断遥控选择和遥控执行的Response
 		return;
 
-	int result = WriteResponse__Member_PR_success == mmsContent.vecResponseResult[0] ? 1 : 0;         //iec61850遥控执行结果  0 失败   1 成功
-
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("domain:") + pointName);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("result:") + boost::lexical_cast<string>(result));
-
-	char utcTime[64] = {0};
+	//遥控回复没带时标，控制时间采用报文时标
+	char utcTime[64] = {0};                                                                      //时间格式 yyyy-MM-dd hh:mm:ss.zzz
 	Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)utcTime);          //#include "conversions.h" 加了extern "C" 否则会找不到定义
 
-	int sbo = 0;   //报文类型 0 执行  1 选择
+	int ctrlCmdType = ctrlObject.find("SBOw") != string::npos ? 0 : 1;    //报文类型 0:选择  1:执行
 
-	string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
-						"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
-						.append("('iec61850").append("','").append(utcTime).append("','")
-						.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
-						.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
-						.append(pointName).append("','").append("").append("',")
-						.append(boost::lexical_cast<string>(result)).append(",").append(boost::lexical_cast<string>(sbo)).append(")");
+	char ctrlValue[64] = {0};
+	getControlValue(requestMmmsContent.mmsValue, ctrlValue, 64);
 
-	mysqlHelper.execSql(sql);
+	int ctrlResult = WriteResponse__Member_PR_success == mmsContent.vecResponseResult[0] ? 1 : 2;       //Reponse遥控执行结果 1:成功  2:失败   0:Request
+
+
+	publishRemoteControl(mmsContent, ctrlObject, ctrlValue, ctrlCmdType, ctrlResult);
+}
+
+char* PacketParse::getControlValue(MmsValue* mmsValue, char* buffer, int bufferSize)
+{
+	MmsValue*  value = MmsValue_getElement(mmsValue, 0);             //控制值在最前面
+
+	if(MMS_BOOLEAN == MmsValue_getType(value))
+	{
+		MmsValue_printToBuffer(value, buffer, bufferSize);
+	}
+
+	return buffer;
+}
+
+int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject, string ctrlValue, int ctrlCmdType, int ctrlResult)
+{
+	RtdbMessage rtdbMessage;
+	rtdbMessage.set_messagetype(TYPE_REALPOINT);
+
+	RealPointValue* realPointValue = rtdbMessage.mutable_realpointvalue();
+	realPointValue->set_channelname(SingletonConfig->getChannelName());
+	realPointValue->set_pointvalue(ctrlValue);
+	realPointValue->set_pointaddr(SingletonConfig->getPubAddrByFcda(ctrlObject));
+	realPointValue->set_valuetype(VTYPE_BOOL);
+	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
+	realPointValue->set_timevalue("");                                        //mmsContent.packetTimeStamp
+	realPointValue->set_sourip(mmsContent.srcIp);
+	realPointValue->set_destip(mmsContent.dstIp);
+	realPointValue->set_protocoltype("IEC61850");
+	realPointValue->set_ctrlcmdtype(CtrlCmdType(ctrlCmdType));                            //0
+	realPointValue->set_executeresult(CmdExecuteResult(ctrlResult));
+	//realPointValue->set_pcapfilename(mmsContent.pcapFile);
+
+	string dataBuf;
+	rtdbMessage.SerializeToString(&dataBuf);
+
+	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(ctrlObject));
 }
 
 void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 {
-	MmsValue* optFlds = MmsValue_getElement(mmsContent.mmsValue, 1);        //报告选项域在访问结果中的下标为1
+	MmsValue* optFlds = MmsValue_getElement(mmsContent.mmsValue, 1);        //报告选项域在访问结果中的下标为1         详情在IEC611850入门第215页
 
 	int mmsValueIndex = 2;
 	/* check for sequence-number */
@@ -434,7 +477,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 
 	char datasetname[64] = {0};
 	/* check for data set name */
-	if (MmsValue_getBitStringBit(optFlds, 4) == true) {
+	if (MmsValue_getBitStringBit(optFlds, 4) == true) {                                        //选项域中各个比特位的含义，详情在IEC611850入门第217页
 		MmsValue* mmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);
 		MmsValue_printToBuffer(mmsValue, datasetname, 64);
 		mmsValueIndex++;
@@ -474,9 +517,10 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 		}
 	}
 
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSetName:") + datasetname);
 	vector<string> vecFcd = dataSetModel.getFcdByDataset(datasetname);
-
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("dataset:") + datasetname +
+																		" size:" + boost::lexical_cast<string>(vecFcd.size()) +
+																		" inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
 	for(int i = 0; i < inclusionBitSize; ++i)
 	{
 		if(MmsValue_getBitStringBit(inclusionBitstring, i))
@@ -491,7 +535,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 			{
 				string fcda = vecFcda.at(j);
 				MmsValue* fcdaMmsValue = MmsValue_getElement(value, j);
-				publishPointValue(fcda, fcdaMmsValue);                                             //通过redis发布实时点值
+				publishPointValue(mmsContent, fcda, fcdaMmsValue);                                  //通过redis发布实时点值
 			}
 		}
 	}
@@ -525,22 +569,8 @@ PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 	return ctype;
 }
 
-char* PacketParse::getMmsValueUtcTime(MmsValue*  mmsValue, char* buffer, int bufferSize)
-{
-	int elementCount = MmsValue_getArraySize(mmsValue);
-	for(int i = 0; i < elementCount; ++i)
-	{
-		MmsValue*  value = MmsValue_getElement(mmsValue, i);
 
-		if(MMS_UTC_TIME == MmsValue_getType(value))
-		{
-			MmsValue_printToBuffer(value, buffer, bufferSize);
-		}
-	}
-	return buffer;
-}
-
-int PacketParse::publishPointValue(string fcda, MmsValue*  fcdaMmsValue)
+int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, MmsValue*  fcdaMmsValue)
 {
 	MmsType fcdaType = MmsValue_getType(fcdaMmsValue);
 	switch(fcdaType)
@@ -559,19 +589,29 @@ int PacketParse::publishPointValue(string fcda, MmsValue*  fcdaMmsValue)
 
 	PointValueType ctype = getPointValueType(fcdaMmsValue);
 
+	//遥控回复没带时标，控制时间采用报文时标
+	char utcTime[64] = {0};                                                                      //时间格式 yyyy-MM-dd hh:mm:ss.zzz
+	Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)utcTime);          //#include "conversions.h" 加了extern "C" 否则会找不到定义
+
 	RtdbMessage rtdbMessage;
 	rtdbMessage.set_messagetype(TYPE_REALPOINT);
+
 	RealPointValue* realPointValue = rtdbMessage.mutable_realpointvalue();
 	realPointValue->set_channelname(SingletonConfig->getChannelName());
 	realPointValue->set_pointvalue(strFcdaMmsValue);
 	realPointValue->set_pointaddr(SingletonConfig->getPubAddrByFcda(fcda));
 	realPointValue->set_valuetype(ctype);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
+	realPointValue->set_timevalue(utcTime);              //mmsContent.packetTimeStamp
+	realPointValue->set_sourip(mmsContent.srcIp);
+	realPointValue->set_destip(mmsContent.dstIp);
+	realPointValue->set_protocoltype("IEC61850");
+	//realPointValue->set_pcapfilename(mmsContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf);
+	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(fcda));
 }
 
 void PacketParse::judgeRemoteControl(stMmsContent mmsContent)
@@ -721,6 +761,8 @@ void PacketParse::stop()
 }
 
 
+
+
 //RtdbMessage rtdbMessage;
 //	rtdbMessage.set_messagetype(TYPE_REMOTECONTROL);
 //	RemoteControl* remoteControl = rtdbMessage.mutable_remotecontrol();
@@ -810,3 +852,35 @@ void PacketParse::stop()
 //sprintf(dst_mac,"%02x:%02x:%02x:%02x:%02x:%02x", ethdr->ether_dhost[0], ethdr->ether_dhost[1],ethdr->ether_dhost[2],ethdr->ether_dhost[3],ethdr->ether_dhost[4],ethdr->ether_dhost[5]);
 //sprintf(src_mac,"%02x:%02x:%02x:%02x:%02x:%02x", ethdr->ether_shost[0], ethdr->ether_shost[1],ethdr->ether_shost[2],ethdr->ether_shost[3],ethdr->ether_shost[4],ethdr->ether_shost[5]);
 
+
+//string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
+//					"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
+//					.append("('iec61850").append("','").append(utcTime).append("','")
+//					.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
+//					.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
+//					.append(pointName).append("','").append("").append("',")
+//					.append("0").append(",").append(boost::lexical_cast<string>(sbo)).append(")");
+//
+//mysqlHelper.execSql(sql);
+
+//int sbo = 0;   //报文类型 0 执行  1 选择
+//
+//string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
+//					"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
+//					.append("('iec61850").append("','").append(utcTime).append("','")
+//					.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
+//					.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
+//					.append(pointName).append("','").append("").append("',")
+//					.append(boost::lexical_cast<string>(result)).append(",").append(boost::lexical_cast<string>(sbo)).append(")");
+//
+//mysqlHelper.execSql(sql);
+
+
+//if(mysqlHelper.connect(SingletonConfig->getMysqlIp(), SingletonConfig->getMysqlPort(), SingletonConfig->getMysqlDbName(), SingletonConfig->getMysqlUser(), SingletonConfig->getMysqlPassWd()))
+//{
+//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Mysql Connect Success:" + SingletonConfig->getMysqlIp());
+//}
+//else
+//{
+//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Mysql Connect Failure:" + SingletonConfig->getMysqlIp());
+//}

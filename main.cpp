@@ -37,21 +37,6 @@ void initConfigDetail()
 	{
 		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load Configuration.xml Success");
 	}
-
-	if(SingletonConfig->initConfig("/home/GM2000/config.ini"))
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load config.ini Success");
-	}
-
-	if(SingletonConfig->initDeviceDescTxt("/home/GM2000/devicedesc.txt"))
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load devicedesc.txt Success");
-	}
-
-	if(SingletonConfig->initPointDescTxt("/home/GM2000/pointdesc.txt"))
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load pointdesc.txt Success");
-	}
 }
 
 int main(int argc,char **argv)
@@ -61,13 +46,14 @@ int main(int argc,char **argv)
 
 	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------start--------------------");
 	SingletonConfig->setChannelName("N1");
-	initConfigDetail();                             //初始化所有配置数据
+
+    //初始化所有配置数据
+	initConfigDetail();
 
 	struct pcap_pkthdr *pkthdr = NULL;
 	u_char *packet = NULL;
 	ReadPcapFile readPcapFile;
 	PacketParse packetParse;
-
 
 	PcapDirManager pcapDirManager(SingletonConfig->getSrcPacpFilePath());
 
@@ -91,7 +77,7 @@ int main(int argc,char **argv)
 				if(result == 1)             	//返回数据成功
 				{
 					packetCnt++;
-					packetParse.dissectPacket(pkthdr, packet);     //分析报文内容
+					packetParse.dissectPacket(fileName, pkthdr, packet);     //分析报文内容
 				}
 				else if(result == -2)          //文件最后一个报文
 				{
@@ -100,6 +86,9 @@ int main(int argc,char **argv)
 						sleep(1);
 						continue;
 					}
+
+					readPcapFile.closePcapFile();
+					pcapDirManager.renamePcapFile(fileName, fileName + "bak");
 					break;
 				}
 			}
@@ -108,13 +97,27 @@ int main(int argc,char **argv)
 		{
 			SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Open " + fileName + " Failure");
 		}
-
-		pcapDirManager.renamePcapFile(fileName, fileName + "bak");
 	}
 
 	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------end--------------------");
 
 	return 0;
 }
+
+
+//if(SingletonConfig->initConfig("/home/GM2000/config.ini"))
+//{
+//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load config.ini Success");
+//}
+
+//if(SingletonConfig->initDeviceDescTxt("/home/GM2000/devicedesc.txt"))
+//{
+//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load devicedesc.txt Success");
+//}
+//
+//if(SingletonConfig->initPointDescTxt("/home/GM2000/pointdesc.txt"))
+//{
+//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load pointdesc.txt Success");
+//}
 
 

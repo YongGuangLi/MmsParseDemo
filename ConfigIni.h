@@ -92,8 +92,8 @@ private:
 
 	string datasetFilePath;                   //点表文件路径
 
-	map<string, string> mapDeviceDesc;        //key:设备ip  value:描述
-	map<string, string> mapPointDesc;         //key:点名    value:描述
+	map<string, string> mapDeviceDesc;        //key:设备ip  value:描述         用于遥控分析
+	map<string, string> mapPointDesc;         //key:点名    value:描述         用于遥控分析
 };
 
 #endif /* CONFIGINI_H_ */
