@@ -63,7 +63,8 @@ typedef struct
 	vector<string> vecDomainName;        //域名   变量列表ListofVariable由一个或多个变量组成，客户端能够在一次write服务中访问多个变量，但是程序中默认一次只write一个变量
 	vector<string> vecItemName;          //项目名  域名，项目名组合起来就是代表受控对象的变量名
 	MmsValue*  mmsValue;
-	vector<int> vecResponseResult;       //遥控回复结果
+	string ctrlValue;                    //遥控值，以断路器遥控为例，true代表合闸，false分闸
+	int responseResult;                  //遥控Response结果         默认一次只write一个变量
 	uint64_t packetTimeStamp;            //报文时标
 	string pcapFile;                     //报文文件名
 }stMmsContent;
@@ -82,15 +83,15 @@ public:
 
 	int dissectTcpHeader(struct pcap_pkthdr *pkthdr, u_char *packet, int offset, stMmsContent *mmsContent);
 	//返回应用数据长度
-	int dissectTPKT(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);
+	int dissectTPKT(u_char *packet, int offset);
 
-	int dissectCOTP(struct pcap_pkthdr *pkthdr, u_char *packet, int offset);
+	int dissectCOTP(u_char *packet, int offset);
 
-	int dissectSession(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset);
+	int dissectSession(u_char *packet, int datalen, int offset);
 
-	int dissectPresentation(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset);
+	int dissectPresentation(u_char *packet, int datalen, int offset);
 
-	int dissectMmsContent(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset, stMmsContent *mmsContent);
+	int dissectMmsContent(u_char *packet, int datalen, int offset, stMmsContent *mmsContent);
 
 	void SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent);
 
@@ -99,25 +100,27 @@ public:
 	void SetUnConfirmedPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent);
 
 public:
+	bool isReceiveEntireSegmentData(u_int32_t ack);
+public:
 	//分析MMS报文内容
 	void analysisMmsContent(stMmsContent mmsContent);
 
 	char* getMmsValueUtcTime(MmsValue* mmsValue, char* buffer, int bufferSize);
-	//分析遥控请求
+	//分析遥控请求      参数为引用是因为需要赋值遥控值
 	void analysisServiceRequestWrite(stMmsContent mmsContent);
 	//分析遥控回复
 	void analysisServiceResponseWrite(stMmsContent mmsContent);
 	//获取控制值
 	char* getControlValue(MmsValue* mmsValue, char* buffer, int bufferSize);
 	//通过redis发布遥控信息
-	int publishRemoteControl(stMmsContent mmsContent, string ctrlObject, string ctrlValue, int ctrlCmdType, int ctrlResult);
+	int publishRemoteControl(stMmsContent mmsContent, string ctrlObject, char* utcTime, string ctrlValue, int ctrlCmdType, int ctrlResult);
 
 	//分析有名变量列表
 	void analysisVaribleList(stMmsContent mmsContent);
 	//获取实时点值类型
 	PointValueType getPointValueType(MmsValue*  mmsValue);
 	//通过redis发布实时点值
-	int publishPointValue(stMmsContent mmsContent, string fcda, MmsValue*  fcdaMmsValue);
+	int publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue, char* utcTime);
 
 	void judgeRemoteControl(stMmsContent mmsContent);
 
@@ -146,6 +149,12 @@ private:
 	bool isRunning;
 
 	DataSetModel dataSetModel;
+
+	map<u_int32_t, u_int32_t> mapReassembledTcpLength;       //tcp多包发送时，总数据长度在第一个包的TPKT中，每个包的ACK相同
+	map<u_int32_t, string> mapTcpSegmentData;                //tcp多包发送时，保存相同ACK的数据，当所有包的数据长度加起来的总数据长度，认为结束
+
+	u_char entireSegmentData[8192];
+	int entireSegmentDataLength;
 };
 
 #endif /* PACKETPARSE_H_ */

@@ -22,30 +22,31 @@ void PcapDirManager::searchPacpFile()
 
 	boost::regex reg(SEARCHREGEX);
 
-	boost::filesystem::path file_path(dirName_);   //初始化
-	boost::filesystem::directory_iterator itFile(file_path);
-	boost::filesystem::directory_iterator end_iter; // 缺省构造生成一个结束迭代器
+	boost::filesystem::path dirPath(dirName_);   //初始化
+	boost::filesystem::directory_iterator itFile(dirPath);
+	boost::filesystem::directory_iterator end_iter;            // 缺省构造生成一个结束迭代器
 	for (; itFile != end_iter; ++itFile)
 	{
-		if (boost::filesystem::is_regular_file(*itFile))
+		if (boost::filesystem::is_regular_file(*itFile))             //判断是否是文件
 		{
 			if(boost::regex_match( itFile->path().string() , reg))
 			{
-				mapLastWriteFile_.insert( make_pair( last_write_time(itFile->path()), itFile->path().string() ));
+				boost::filesystem::path filePath(itFile->path().string());
+				mapLastWriteFile_.insert( make_pair( last_write_time(itFile->path()), filePath));
 			}
 		}
 	}
 }
 
-string PcapDirManager::getFisrtFile()
+boost::filesystem::path PcapDirManager::getFisrtFile()
 {
 	searchPacpFile();
 
-	string fileName;
-	map<time_t, string>::iterator it = mapLastWriteFile_.begin();
+	boost::filesystem::path filePath;
+	map<time_t, boost::filesystem::path>::iterator it = mapLastWriteFile_.begin();
 	if(it != mapLastWriteFile_.end())
-		fileName = it->second;
-	return fileName;
+		filePath = it->second;
+	return filePath;
 }
 
 int PcapDirManager::getFileNum()
@@ -58,7 +59,7 @@ int PcapDirManager::getFileNum()
 void PcapDirManager::renamePcapFile(string oldFile, string newFile)
 {
 	boost::filesystem::path filePath(newFile);
-	if(!boost::filesystem::exists(filePath.parent_path()))         //如果不存在，则创建
+	if(!boost::filesystem::exists(filePath.parent_path()))             //如果不存在，则创建
 	{
 		boost::filesystem::create_directory(filePath.parent_path());
 	}

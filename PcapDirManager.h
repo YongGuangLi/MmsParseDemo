@@ -28,13 +28,13 @@ public:
 
 	void searchPacpFile();     //搜索路径下文件
 
-	string getFisrtFile();    //获取修改时间最早的文件
+	boost::filesystem::path getFisrtFile();    //获取修改时间最早的文件
 
 	int getFileNum();        //返回文件个数
 
 	void renamePcapFile(string oldFile, string newFile);
 private:
-	map<time_t, string> mapLastWriteFile_;       //按最后修改时间把文件排序
+	map<time_t, boost::filesystem::path> mapLastWriteFile_;       //按最后修改时间把文件排序
 	string dirName_;
 };
 

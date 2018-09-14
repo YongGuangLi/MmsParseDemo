@@ -54,12 +54,13 @@ int main(int argc,char **argv)
 	u_char *packet = NULL;
 	ReadPcapFile readPcapFile;
 	PacketParse packetParse;
-
 	PcapDirManager pcapDirManager(SingletonConfig->getSrcPacpFilePath());
 
 	while(g_isRunning)
 	{
-		string fileName = pcapDirManager.getFisrtFile();
+		boost::filesystem::path filePath = pcapDirManager.getFisrtFile();
+		string fileName = filePath.string();
+
 		if(fileName.empty())
 		{
 			SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, SingletonConfig->getSrcPacpFilePath() + " is Empty");
@@ -77,7 +78,8 @@ int main(int argc,char **argv)
 				if(result == 1)             	//返回数据成功
 				{
 					packetCnt++;
-					packetParse.dissectPacket(fileName, pkthdr, packet);     //分析报文内容
+					//printf("packetCnt = %d\n",packetCnt);
+					packetParse.dissectPacket(filePath.filename().string(), pkthdr, packet);     //分析报文内容
 				}
 				else if(result == -2)          //文件最后一个报文
 				{
@@ -88,7 +90,7 @@ int main(int argc,char **argv)
 					}
 
 					readPcapFile.closePcapFile();
-					pcapDirManager.renamePcapFile(fileName, fileName + "bak");
+					pcapDirManager.renamePcapFile(fileName, SingletonConfig->getDstPacpFilePath() + "/" + filePath.filename().string());
 					break;
 				}
 			}
@@ -100,7 +102,6 @@ int main(int argc,char **argv)
 	}
 
 	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------end--------------------");
-
 	return 0;
 }
 

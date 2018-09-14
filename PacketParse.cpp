@@ -11,18 +11,19 @@ PacketParse::PacketParse() {
 	isRunning = true;
 	queMmsContent.set_size(100000);
 
+	memset(entireSegmentData, 0, 4096);
+	entireSegmentDataLength = 0;
+
 	start();
 
-	if(dataSetModel.load(SingletonConfig->getDatasetFilePath()))
+	if(dataSetModel.load("/home/GM2000/" + SingletonConfig->getDatasetFilePath()))
 	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load datasetfile Success:" + SingletonConfig->getDatasetFilePath());
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load datasetfile Success:/home/GM2000/" + SingletonConfig->getDatasetFilePath());
 	}
 	else
 	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Load datasetfile Failure:" + SingletonConfig->getDatasetFilePath());
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Load datasetfile Failure:/home/GM2000/" + SingletonConfig->getDatasetFilePath());
 	}
-
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Start Dissect Packet");
 }
 
 PacketParse::~PacketParse() {
@@ -52,35 +53,69 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 	offset += IPLENGTH;
 
 	dissectTcpHeader(pkthdr, packet, offset,  &mmsContent);
-	offset += mmsContent.tcphdr->doff * 4;
-
+	offset += mmsContent.tcphdr->doff * 4;  // tcp头长度  mmsContent.tcphdr->doff * 4
 	if(pkthdr->len <= offset)         //不是报文数据太短，不是mms
 	{
 		return;
 	}
 
-	int datalen = dissectTPKT(pkthdr, packet, offset);
+	//如果存在此ACK，表示这个ACK是多包发送，并且不是第一个包,并判断是否是最后一个包，如果不是最后一个包，退出，知道接收整个包
+	int segmentDataLength = pkthdr->len - 14 - 20 - mmsContent.tcphdr->doff * 4;
+	int tpkt_len = ntohs(*(uint16_t*)(packet + offset + 2));
+
+	//printf("Ack = %u segmentDataLength = %d\n", mmsContent.tcphdr->ack_seq, segmentDataLength);
+
+	if(tpkt_len != 8196 &&  tpkt_len > segmentDataLength && packet[offset] == 0x03 && packet[offset + 1] == 0x00)    //如果数据长度大于报文实际长度，表示这是分段组包, 一般数据长度等于报文长度减去Mac头，IP头，TCP头
+	{
+		//printf("Ack = %u tpkt_len = %d\n", mmsContent.tcphdr->ack_seq, tpkt_len);
+		memset(entireSegmentData, 0, 4096);
+		entireSegmentDataLength = 0;
+
+		//第一条报文
+		mapReassembledTcpLength.insert(make_pair(mmsContent.tcphdr->ack_seq, tpkt_len));
+
+		memcpy(entireSegmentData + entireSegmentDataLength, packet + offset, segmentDataLength);
+		entireSegmentDataLength += segmentDataLength;
+		return;
+	}
+
+	map<u_int32_t, u_int32_t>::iterator it = mapReassembledTcpLength.find(mmsContent.tcphdr->ack_seq);
+	if(it != mapReassembledTcpLength.end())
+	{
+		memcpy(entireSegmentData + entireSegmentDataLength, packet + offset, segmentDataLength);
+		entireSegmentDataLength += segmentDataLength;
+
+		if(!isReceiveEntireSegmentData(mmsContent.tcphdr->ack_seq))            //不是最后一个包
+			return;
+
+		mapReassembledTcpLength.erase(it);
+		packet = entireSegmentData;
+		offset = 0;
+	}
+
+	int datalen = dissectTPKT(packet, offset);                      //TPKT占4个字节
 	offset += 4;
 	datalen -= 4;
 
-	int cotpOffset = dissectCOTP(pkthdr, packet, offset);
+	int cotpOffset = dissectCOTP(packet, offset);
 	offset += cotpOffset;
 	datalen -= cotpOffset;
 
-	int sessionOffset = dissectSession(pkthdr, packet, datalen, offset);
+	int sessionOffset = dissectSession(packet, datalen, offset);
 	offset += sessionOffset;
 	datalen -= sessionOffset;
 	if(sessionOffset == -1)         //Session Analysis Abnormal
 	{
+		//printf("sessionOffset = %d\n",sessionOffset);
 		return;
 	}
 
-	int presentationOffset = dissectPresentation(pkthdr, packet, datalen, offset);    //修改了源代码的返回值
+	int presentationOffset = dissectPresentation(packet, datalen, offset);    //修改了源代码的返回值
 	offset += presentationOffset;
 	datalen -= presentationOffset;
 
-	dissectMmsContent(pkthdr, packet, datalen, offset, &mmsContent);
-
+	dissectMmsContent(packet, datalen, offset, &mmsContent);
+	//printf("in\n");
 	queMmsContent.push_back(mmsContent);
 }
 
@@ -108,7 +143,7 @@ int PacketParse::dissectTcpHeader(struct pcap_pkthdr *pkthdr, u_char *packet, in
 	return 0;
 }
 
-int PacketParse::dissectTPKT(struct pcap_pkthdr *pkthdr, u_char *packet, int offset)
+int PacketParse::dissectTPKT(u_char *packet, int offset)
 {
 	int tpkt_version = *(uint8_t*)(packet + offset);
 
@@ -119,12 +154,12 @@ int PacketParse::dissectTPKT(struct pcap_pkthdr *pkthdr, u_char *packet, int off
 	return tpkt_len;
 }
 
-int PacketParse::dissectCOTP(struct pcap_pkthdr *pkthdr, u_char *packet, int offset)
+int PacketParse::dissectCOTP(u_char *packet, int offset)
 {
 	return 3;
 }
 
-int PacketParse::dissectSession(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset)
+int PacketParse::dissectSession(u_char *packet, int datalen, int offset)
 {
 	IsoSession session;
 	ByteBuffer message;
@@ -146,7 +181,7 @@ int PacketParse::dissectSession(struct pcap_pkthdr *pkthdr, u_char *packet, int 
 	return sessionOffset;
 }
 
-int PacketParse::dissectPresentation(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset)
+int PacketParse::dissectPresentation(u_char *packet, int datalen, int offset)
 {
 	IsoPresentation self;
 	ByteBuffer readBuffer;
@@ -158,7 +193,7 @@ int PacketParse::dissectPresentation(struct pcap_pkthdr *pkthdr, u_char *packet,
 	return presentationOffset;
 }
 
-int PacketParse::dissectMmsContent(struct pcap_pkthdr *pkthdr, u_char *packet, int datalen, int offset, stMmsContent *mmsContent)
+int PacketParse::dissectMmsContent(u_char *packet, int datalen, int offset, stMmsContent *mmsContent)
 {
 	MmsPdu_t* mmsPdu = 0; /* allow asn1c to allocate structure */
 
@@ -187,10 +222,11 @@ int PacketParse::dissectMmsContent(struct pcap_pkthdr *pkthdr, u_char *packet, i
 	return 0;
 }
 
+//带确认请求
 void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent)
 {
 	mmsContent->invokeId = mmsClient_getInvokeId(&mmsPdu->choice.confirmedResponsePdu);  //#include "mms_client_internal.h" 加了extern "C" 否则会找不到定义
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
+	//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
 
 	if (ConfirmedServiceRequest_PR_read == mmsPdu->choice.confirmedRequestPdu.confirmedServiceRequest.present)  //read     只解析报文，后续没有处理
 	{
@@ -237,15 +273,16 @@ void PacketParse::SetConfirmedRequestPduResult(MmsPdu_t* mmsPdu, stMmsContent *m
 		if(writeRequest.listOfData.list.count >= 1)
 		{
 			MmsValue* value = mmsMsg_parseDataElement(writeRequest.listOfData.list.array[0]);
-			mmsContent->mmsValue = value;                 //控制详细数据，以断路器遥控为例，true代表合闸，false分闸
+			mmsContent->mmsValue = value;                 //遥控请求详细数据
 		}
 	}
 };
 
+//带确认回复
 void PacketParse::SetConfirmedResponsePduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent)
 {
 	mmsContent->invokeId = mmsClient_getInvokeId(&mmsPdu->choice.confirmedResponsePdu);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
+	//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
 
 	if (ConfirmedServiceResponse_PR_read == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)          	//read  只解析报文，后续没有处理
 	{
@@ -263,7 +300,7 @@ void PacketParse::SetConfirmedResponsePduResult(MmsPdu_t* mmsPdu, stMmsContent *
 		WriteResponse_t writeResponse = mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.choice.write;
 		if(writeResponse.list.count >= 1)
 		{
-			mmsContent->vecResponseResult.push_back(writeResponse.list.array[0]->present);
+			mmsContent->responseResult = writeResponse.list.array[0]->present;
 		}
 	}
 }
@@ -390,7 +427,7 @@ void PacketParse::analysisServiceRequestWrite(stMmsContent mmsContent)
 
 	int ctrlResult = 0;  //Request没有控制结果，以0表示Requset
 
-	publishRemoteControl(mmsContent, ctrlObject, ctrlValue, ctrlCmdType, ctrlResult);
+	publishRemoteControl(mmsContent, ctrlObject,  utcTime, ctrlValue, ctrlCmdType, ctrlResult);
 }
 
 //分析遥控Respnse
@@ -414,13 +451,11 @@ void PacketParse::analysisServiceResponseWrite(stMmsContent mmsContent)
 
 	int ctrlCmdType = ctrlObject.find("SBOw") != string::npos ? 0 : 1;    //报文类型 0:选择  1:执行
 
-	char ctrlValue[64] = {0};
-	getControlValue(requestMmmsContent.mmsValue, ctrlValue, 64);
+	char ctrlValue[64] = {0};        //回复没有遥控值
 
-	int ctrlResult = WriteResponse__Member_PR_success == mmsContent.vecResponseResult[0] ? 1 : 2;       //Reponse遥控执行结果 1:成功  2:失败   0:Request
+	int ctrlResult = WriteResponse__Member_PR_success == mmsContent.responseResult ? 1 : 2;       //Reponse遥控执行结果 1:成功  2:失败   0:Request
 
-
-	publishRemoteControl(mmsContent, ctrlObject, ctrlValue, ctrlCmdType, ctrlResult);
+	publishRemoteControl(mmsContent, ctrlObject, utcTime, ctrlValue, ctrlCmdType, ctrlResult);
 }
 
 char* PacketParse::getControlValue(MmsValue* mmsValue, char* buffer, int bufferSize)
@@ -435,8 +470,12 @@ char* PacketParse::getControlValue(MmsValue* mmsValue, char* buffer, int bufferS
 	return buffer;
 }
 
-int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject, string ctrlValue, int ctrlCmdType, int ctrlResult)
+int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject, char* utcTime, string ctrlValue, int ctrlCmdType, int ctrlResult)
 {
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO,"invokeId:" + boost::lexical_cast<string>(mmsContent.invokeId) +
+																		" ctrlObject:" + ctrlObject + " utcTime:" + utcTime +
+																		" ctrlValue:" + ctrlValue);
+
 	RtdbMessage rtdbMessage;
 	rtdbMessage.set_messagetype(TYPE_REALPOINT);
 
@@ -446,7 +485,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	realPointValue->set_pointaddr(SingletonConfig->getPubAddrByFcda(ctrlObject));
 	realPointValue->set_valuetype(VTYPE_BOOL);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
-	realPointValue->set_timevalue("");                                        //mmsContent.packetTimeStamp
+	realPointValue->set_timevalue(utcTime);
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
 	realPointValue->set_protocoltype("IEC61850");
@@ -457,7 +496,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(ctrlObject));
+	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(ctrlObject) + "_2");
 }
 
 void PacketParse::analysisVaribleList(stMmsContent mmsContent)
@@ -531,16 +570,34 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 			string fcd = vecFcd.at(i);
 			vector<string> vecFcda = dataSetModel.getFcdaByFcd(fcd);                               //通过FCD获取FCD中的每个数据引用
 
-			for(int j = 0; j < vecFcda.size(); ++j)
+			string fcda = vecFcda.at(0);
+			string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
+			if(redisAddr.empty())
 			{
-				string fcda = vecFcda.at(j);
-				MmsValue* fcdaMmsValue = MmsValue_getElement(value, j);
-				publishPointValue(mmsContent, fcda, fcdaMmsValue);                                  //通过redis发布实时点值
+				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, fcda + " not redisAddr");
+				continue;
 			}
+
+			//值的下标为0
+			MmsValue* fcdaMmsValue = MmsValue_getElement(value, 0);
+			if(fcdaMmsValue == NULL)
+			{
+				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, string("dataset:") + datasetname + " fcdaMmsValue NULL");
+				continue;
+			}
+
+			//时标的下标为2，  品质的下标为1,  有些点没有时标
+			char utcTime[64] = {0};
+			MmsValue* utcTimeMmsValue = MmsValue_getElement(value, 2);
+			if(utcTimeMmsValue != NULL)
+			{
+				MmsValue_printToBuffer(utcTimeMmsValue, utcTime, 64);
+			}
+
+			publishPointValue(mmsContent, fcda, redisAddr, fcdaMmsValue, utcTime);                                  //通过redis发布实时点值
 		}
 	}
 }
-
 
 PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 {
@@ -570,7 +627,7 @@ PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 }
 
 
-int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, MmsValue*  fcdaMmsValue)
+int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue, char* utcTime)
 {
 	MmsType fcdaType = MmsValue_getType(fcdaMmsValue);
 	switch(fcdaType)
@@ -585,13 +642,12 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, MmsValu
 
 	char strFcdaMmsValue[64] = {0};
 	MmsValue_printToBuffer(fcdaMmsValue, strFcdaMmsValue, 64);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, fcda + " type:" + MmsValue_getTypeString(fcdaMmsValue) + string("  value:") + strFcdaMmsValue);
+
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, fcda + " type:" + MmsValue_getTypeString(fcdaMmsValue) +
+																		string("  value:") + strFcdaMmsValue +
+																		" utcTime:" + utcTime);
 
 	PointValueType ctype = getPointValueType(fcdaMmsValue);
-
-	//遥控回复没带时标，控制时间采用报文时标
-	char utcTime[64] = {0};                                                                      //时间格式 yyyy-MM-dd hh:mm:ss.zzz
-	Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)utcTime);          //#include "conversions.h" 加了extern "C" 否则会找不到定义
 
 	RtdbMessage rtdbMessage;
 	rtdbMessage.set_messagetype(TYPE_REALPOINT);
@@ -599,10 +655,10 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, MmsValu
 	RealPointValue* realPointValue = rtdbMessage.mutable_realpointvalue();
 	realPointValue->set_channelname(SingletonConfig->getChannelName());
 	realPointValue->set_pointvalue(strFcdaMmsValue);
-	realPointValue->set_pointaddr(SingletonConfig->getPubAddrByFcda(fcda));
+	realPointValue->set_pointaddr(redisAddr);
 	realPointValue->set_valuetype(ctype);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
-	realPointValue->set_timevalue(utcTime);              //mmsContent.packetTimeStamp
+	realPointValue->set_timevalue(utcTime);                                        //实时点时标
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
 	realPointValue->set_protocoltype("IEC61850");
@@ -611,7 +667,7 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, MmsValu
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(fcda));
+	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(fcda) + "_2");
 }
 
 void PacketParse::judgeRemoteControl(stMmsContent mmsContent)
@@ -762,6 +818,17 @@ void PacketParse::stop()
 
 
 
+bool PacketParse::isReceiveEntireSegmentData(u_int32_t ack)
+{
+	bool result = false;
+	int reassembledTcpLength = mapReassembledTcpLength[ack];       //整个数据包长度
+	//printf("reassembledTcpLength = %d entireSegmentDataLength = %d\n", reassembledTcpLength, entireSegmentDataLength);
+	if(reassembledTcpLength == entireSegmentDataLength)
+	{
+		result = true;
+	}
+	return result;
+}
 
 //RtdbMessage rtdbMessage;
 //	rtdbMessage.set_messagetype(TYPE_REMOTECONTROL);
