@@ -24,6 +24,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
+#include "boost/thread/mutex.hpp"
 #include <boost/function.hpp>
 
 #include "pcap.h"
@@ -37,6 +38,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#
 using namespace std;
 
 #define MACLENGTH 14
@@ -69,10 +71,24 @@ typedef struct
 	string pcapFile;                     //报文文件名
 }stMmsContent;
 
+typedef struct
+{
+	string srcIp;
+	string dstIp;
+	uint64_t packetTimeStamp;            //报文时标
+	string pcapFile;                     //报文文件名
+	int timeCnt;
+}stTcpContent;
+
+typedef struct
+{
+	u_char segmentData[8192];
+	u_int32_t length;
+}stSegmentContent;
 
 class PacketParse {
 public:
-	PacketParse();
+	PacketParse(string datasetFilePath);
 	virtual ~PacketParse();
 
 	void dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_char *packet);
@@ -100,13 +116,11 @@ public:
 	void SetUnConfirmedPduResult(MmsPdu_t* mmsPdu, stMmsContent *mmsContent);
 
 public:
-	bool isReceiveEntireSegmentData(u_int32_t ack);
-public:
 	//分析MMS报文内容
 	void analysisMmsContent(stMmsContent mmsContent);
-
+	//获取遥控请求时标
 	char* getMmsValueUtcTime(MmsValue* mmsValue, char* buffer, int bufferSize);
-	//分析遥控请求      参数为引用是因为需要赋值遥控值
+	//分析遥控请求
 	void analysisServiceRequestWrite(stMmsContent mmsContent);
 	//分析遥控回复
 	void analysisServiceResponseWrite(stMmsContent mmsContent);
@@ -122,11 +136,17 @@ public:
 	//通过redis发布实时点值
 	int publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue, char* utcTime);
 
-	void judgeRemoteControl(stMmsContent mmsContent);
-
+	//从mms的数据拷贝tcp数据
+	void copyTcpContentFromMmsContent(stMmsContent mmsContent);
+	//通过redis发布连接状态
+	int publishLinkStatus(stTcpContent tcpContent, string redisAddr, string linkStatus);
 public:
 	//因为遥控请求和遥控回复的InvokeId相同，通过InvokeId获取遥控请求对象
 	stMmsContent getMmsContentByInvokeId(uint32_t);
+
+	void start();                                      //开启线程
+
+	void stop();
 
 	void run();                                        //处理解析完成的报文内容
 
@@ -134,27 +154,25 @@ public:
 
 	void sendHeartBeat();                              //发送心跳
 
-	void start();                                      //开启线程
-
-	void stop();
-
+	void judgeLinkStatus();                       	//判断装置连接状态
 private:
 	map<uint32_t, stMmsContent> mapInvokeIdMmsContent;       //保存遥控请求数据
 
-	RedisHelper* redisHelper;
+	RedisHelper *redisHelper;
 	RedisHelper *heatRedisHelper;                 //发送心跳 redis
 
 	SemaphoreQueue<stMmsContent> queMmsContent;
+
+	boost::mutex lock;
+	map<string, stTcpContent> mapTcpContent;                //key:设备ip value:tcp报文内容
+	list<string> listDisConDevice;                          //所有掉线设备的名字
 
 	bool isRunning;
 
 	DataSetModel dataSetModel;
 
-	map<u_int32_t, u_int32_t> mapReassembledTcpLength;       //tcp多包发送时，总数据长度在第一个包的TPKT中，每个包的ACK相同
-	map<u_int32_t, string> mapTcpSegmentData;                //tcp多包发送时，保存相同ACK的数据，当所有包的数据长度加起来的总数据长度，认为结束
-
-	u_char entireSegmentData[8192];
-	int entireSegmentDataLength;
+	map<u_int32_t, u_int32_t> mapReassembledTcpLength;       //tcp多包发送时，总数据长度 (每个包的ACK相同，值在第一个包的TPKT中）
+	map<u_int32_t, stSegmentContent*> mapSegmentData;
 };
 
 #endif /* PACKETPARSE_H_ */

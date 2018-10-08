@@ -37,9 +37,9 @@ public:
 
 	bool initPointDescTxt(string);
 
-	string getDeviceDesc(string);
+	string getIedName(string);
 
-	string getPointDesc(string);
+	string getLinkStatusRedisAddr(string iedName, string iedIp);
 public:
 	void setChannelName(string);
 	string getChannelName() const;
@@ -92,8 +92,8 @@ private:
 
 	string datasetFilePath;                   //点表文件路径
 
-	map<string, string> mapDeviceDesc;        //key:设备ip  value:描述         用于遥控分析
-	map<string, string> mapPointDesc;         //key:点名    value:描述         用于遥控分析
+	IEC61850_STRUCT::Map_IedInfo mapIedInfo;
+	map<string, string> mapIedName;           //key:设备ip  value:设备名
 };
 
 #endif /* CONFIGINI_H_ */

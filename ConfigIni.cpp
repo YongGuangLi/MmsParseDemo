@@ -51,18 +51,35 @@ bool ConfigIni::loadConfiguration(string filename)
 		return false;
 	}
 
+	string iec61850Channel;
 	ProcessManag::Map_Channel mapChannel = wgjXML.GetAllChannelName();                    //获取所有通道名
 	ProcessManag::Map_Channel::iterator itChannel = mapChannel.begin();
 	for( ; itChannel != mapChannel.end(); itChannel++)
 	{
-		if(itChannel->second.compare("IEC61850") == 0)                                    //通过直采IEC61850获取点表对应的发布点
+		if(itChannel->second.compare("IEC61850") == 0)                                    //找到程序名为IEC61850的通道号
 		{
-			mapFcdaToPubAddr =  wgjXML.Get_Point61850(itChannel->first);
+			iec61850Channel = itChannel->first;
 		}
 	}
 
-	wgjXML.GetRedisConnectionConfig(redisIp,redisPort);                               //获取redis信息
+	//通过直采IEC61850,获取点表对应的发布点
+	mapFcdaToPubAddr =  wgjXML.Get_Point61850(iec61850Channel);
 
+	//获取设备信息
+	mapIedInfo = wgjXML.Get_61850(iec61850Channel);
+	IEC61850_STRUCT::Map_IedInfo::iterator itIedInfo = mapIedInfo.begin();
+	for(; itIedInfo != mapIedInfo.end(); ++itIedInfo)
+	{
+		IEC61850_STRUCT::IED_61850 iedInfo = itIedInfo->second;
+
+		mapIedName[iedInfo.ip_A] = itIedInfo->first;
+		mapIedName[iedInfo.ip_B] = itIedInfo->first;
+	}
+
+	//获取redis信息
+	wgjXML.GetRedisConnectionConfig(redisIp,redisPort);
+
+	//获取网分配置参数
 	NetworkParse::Map_ParseConfig mapParseConfig = wgjXML.GetParseConfigInfo(channelName);
 	NetworkParse::Map_ParseConfig::iterator it = mapParseConfig.begin();
 	for( ; it != mapParseConfig.end(); it++)
@@ -103,40 +120,12 @@ string ConfigIni::getPubAddrByFcda(string fcda)     //通过点名获取发布�
 	return pubAddr;
 }
 
-bool ConfigIni::initDeviceDescTxt(string path)
-{
-	ifstream infile(path.c_str());
-	if (!infile) {
-		return false;
-	}
-	string line, key, value;
-	while (getline(infile, line)) {
-		size_t pos = line.find(':');
-		mapDeviceDesc.insert( make_pair(line.substr(0, pos), line.substr(pos + 1)));
-	}
-	return true;
-}
 
-bool ConfigIni::initPointDescTxt(string path)
-{
-	ifstream infile(path.c_str());
-	if (!infile) {
-		return false;
-	}
-	string line, key, value;
-	while (getline(infile, line)) {
-		size_t pos = line.find(':');
-		mapPointDesc.insert(make_pair(line.substr(0, pos), line.substr(pos + 1)));
-	}
-	return true;
-}
-
-
-string ConfigIni::getDeviceDesc(string deviceip)
+string ConfigIni::getIedName(string deviceip)
 {
 	string iedDesc;
-	map<string, string>::iterator it = mapDeviceDesc.find(deviceip);
-	if(it != mapDeviceDesc.end())
+	map<string, string>::iterator it = mapIedName.find(deviceip);
+	if(it != mapIedName.end())
 	{
 		iedDesc = it->second;
 	}
@@ -144,16 +133,27 @@ string ConfigIni::getDeviceDesc(string deviceip)
 	return iedDesc;
 }
 
-string ConfigIni::getPointDesc(string pointname)
+string ConfigIni::getLinkStatusRedisAddr(string iedName, string iedIp)
 {
-	string pointdesc;
-	map<string, string>::iterator it = mapPointDesc.find(pointname);
-	if(it != mapPointDesc.end())
+	string redisAddr;
+
+	IEC61850_STRUCT::Map_IedInfo::iterator itIedInfo = mapIedInfo.begin();
+	for(; itIedInfo != mapIedInfo.end(); ++itIedInfo)
 	{
-		pointdesc = it->second;
+		IEC61850_STRUCT::IED_61850 iedInfo = itIedInfo->second;
+		if(itIedInfo->first == iedName)
+		{
+			if(itIedInfo->second.ip_A == iedIp)
+			{
+				redisAddr = iedName + "_00057";
+			}else if(itIedInfo->second.ip_B == iedIp)
+			{
+				redisAddr = iedName + "_00061";
+			}
+		}
 	}
 
-	return pointdesc;
+	return redisAddr;
 }
 
 void ConfigIni::setChannelName(string channel)
@@ -233,3 +233,33 @@ int ConfigIni::getPacketCnt() const
 //	lvptProperties.put<int>("setting.key1", ++lvnInt);
 //	//update ini file
 //	ini_parser::write_ini("d:\\temp\\win.ini", lvptProperties);
+
+
+
+//bool ConfigIni::initDeviceDescTxt(string path)
+//{
+//	ifstream infile(path.c_str());
+//	if (!infile) {
+//		return false;
+//	}
+//	string line, key, value;
+//	while (getline(infile, line)) {
+//		size_t pos = line.find(':');
+//		mapDeviceDesc.insert( make_pair(line.substr(0, pos), line.substr(pos + 1)));
+//	}
+//	return true;
+//}
+//
+//bool ConfigIni::initPointDescTxt(string path)
+//{
+//	ifstream infile(path.c_str());
+//	if (!infile) {
+//		return false;
+//	}
+//	string line, key, value;
+//	while (getline(infile, line)) {
+//		size_t pos = line.find(':');
+//		mapPointDesc.insert(make_pair(line.substr(0, pos), line.substr(pos + 1)));
+//	}
+//	return true;
+//}

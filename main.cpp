@@ -31,14 +31,6 @@ void signal_handler(int sign_no)
 	}
 }
 
-void initConfigDetail()
-{
-	if(SingletonConfig->loadConfiguration("/home/GM2000/Configuration.xml"))
-	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load Configuration.xml Success");
-	}
-}
-
 int main(int argc,char **argv)
 {
 	signal(SIGTERM, signal_handler);  // kill -15 终止
@@ -48,14 +40,16 @@ int main(int argc,char **argv)
 	SingletonConfig->setChannelName("N1");
 
     //初始化所有配置数据
-	initConfigDetail();
+	if(SingletonConfig->loadConfiguration("/home/GM2000/Configuration.xml"))
+	{
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load Configuration.xml Success");
+	}
 
 	struct pcap_pkthdr *pkthdr = NULL;
 	u_char *packet = NULL;
 	ReadPcapFile readPcapFile;
-	PacketParse packetParse;
+	PacketParse packetParse("/home/GM2000/" + SingletonConfig->getDatasetFilePath());
 	PcapDirManager pcapDirManager(SingletonConfig->getSrcPacpFilePath());
-
 	while(g_isRunning)
 	{
 		boost::filesystem::path filePath = pcapDirManager.getFisrtFile();
@@ -78,7 +72,6 @@ int main(int argc,char **argv)
 				if(result == 1)             	//返回数据成功
 				{
 					packetCnt++;
-					//printf("packetCnt = %d\n",packetCnt);
 					packetParse.dissectPacket(filePath.filename().string(), pkthdr, packet);     //分析报文内容
 				}
 				else if(result == -2)          //文件最后一个报文
