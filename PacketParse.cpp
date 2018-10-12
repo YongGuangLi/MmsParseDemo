@@ -56,12 +56,12 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 		return;
 	}
 
-	//如果存在此ACK，表示这个ACK是多包发送，并且不是第一个包,并判断是否是最后一个包，如果不是最后一个包，退出，知道接收整个包
+	//如果存在此ACK，表示这个ACK是多包发送，并且不是第一个包,并判断是否是最后一个包，如果不是最后一个包，退出，直到接收整个包
 	int segmentDataLength = pkthdr->len - 14 - 20 - mmsContent.tcphdr->doff * 4;
 	int tpkt_len = ntohs(*(uint16_t*)(packet + offset + 2));
 
-	//printf("Ack = %u segmentDataLength = %d\n", mmsContent.tcphdr->ack_seq, segmentDataLength);
-	//如果数据长度大于报文实际长度，表示这是分段组包, 一般数据长度等于报文长度减去Mac头，IP头，TCP头
+	//printf("Ack = %ld segmentDataLength = %d\n", mmsContent.tcphdr->ack_seq, segmentDataLength);
+	//如果数据长度大于报文实际长度，表示这是分段组包, 一般数据长度等于报文长度减去Mac头，IP头，TCP头  第一个包以0x0300开头    tpkt_len协议数据段长度    segmentDataLength当前报文数据段长度
 	if(tpkt_len != 8196 &&  tpkt_len > segmentDataLength && packet[offset] == 0x03 && packet[offset + 1] == 0x00)
 	{
 		//printf("Ack = %u tpkt_len = %d\n", mmsContent.tcphdr->ack_seq, tpkt_len);
@@ -107,7 +107,7 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 	offset += 4;
 	datalen -= 4;
 
-	int cotpOffset = dissectCOTP(packet, offset);
+	int cotpOffset = dissectCOTP(packet, offset);                   //COTP占3个字节
 	offset += cotpOffset;
 	datalen -= cotpOffset;
 
@@ -512,7 +512,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	realPointValue->set_protocoltype("IEC61850");
 	realPointValue->set_ctrlcmdtype(CtrlCmdType(ctrlCmdType));                            //0
 	realPointValue->set_executeresult(CmdExecuteResult(ctrlResult));
-	//realPointValue->set_pcapfilename(mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(mmsContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
@@ -578,9 +578,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 	}
 
 	vector<string> vecFcd = dataSetModel.getFcdByDataset(datasetname);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSet:") + datasetname +
-																		" Size:" + boost::lexical_cast<string>(vecFcd.size()) +
-																		" inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSet:") + datasetname + " Size:" + boost::lexical_cast<string>(vecFcd.size()) + " inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
 
 	if(vecFcd.size() != inclusionBitSize)
 	{
@@ -592,11 +590,10 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 		if(MmsValue_getBitStringBit(inclusionBitstring, i))
 		{
 			mmsValueIndex++;
-			MmsValue* value = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);             //通过数据集中功能约束数据的下标获取当前值
+			MmsValue* fcdaMmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);             //通过数据集中功能约束数据的下标获取当前值
 
 			string fcd = vecFcd.at(i);
 			vector<string> vecFcda = dataSetModel.getFcdaByFcd(fcd);                               //通过FCD获取FCD中的每个数据引用
-
 			string fcda = vecFcda.at(0);
 			string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
 			if(redisAddr.empty())
@@ -605,23 +602,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 				continue;
 			}
 
-			//值的下标为0
-			MmsValue* fcdaMmsValue = MmsValue_getElement(value, 0);
-			if(fcdaMmsValue == NULL)
-			{
-				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, string("dataset:") + datasetname + " fcdaMmsValue NULL");
-				continue;
-			}
-
-			//时标的下标为2，  品质的下标为1,  有些点没有时标
-			char utcTime[64] = {0};
-			MmsValue* utcTimeMmsValue = MmsValue_getElement(value, 2);
-			if(utcTimeMmsValue != NULL)
-			{
-				MmsValue_printToBuffer(utcTimeMmsValue, utcTime, 64);
-			}
-
-			publishPointValue(mmsContent, fcda, redisAddr, fcdaMmsValue, utcTime);                                  //通过redis发布实时点值
+			publishPointValue(mmsContent, fcda, redisAddr, fcdaMmsValue);                                  //通过redis发布实时点值
 		}
 	}
 }
@@ -654,47 +635,63 @@ PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 }
 
 
-int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue, char* utcTime)
+int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue* fcdaMmsValue)
 {
+
+	char value[64] = {0};
+	char quality[64] = {0};
+	char timestamp[64] = {0};
+	MmsValue* valueMmsValue = NULL ;
+	MmsValue* qualityMmsValue = NULL;
+	MmsValue* timestampMmsValue = NULL;
+
 	MmsType fcdaType = MmsValue_getType(fcdaMmsValue);
 	switch(fcdaType)
 	{
 	case MMS_ARRAY:
 	case MMS_STRUCTURE:
-		fcdaMmsValue = MmsValue_getElement(fcdaMmsValue,0);
+		valueMmsValue = MmsValue_getElement(fcdaMmsValue, 0);
+		while( MmsValue_getType(valueMmsValue) == MMS_ARRAY || MmsValue_getType(valueMmsValue) == MMS_STRUCTURE)
+			valueMmsValue = MmsValue_getElement(valueMmsValue, 0);
+		MmsValue_printToBuffer(valueMmsValue, value, 64);
+
+		qualityMmsValue = MmsValue_getElement(fcdaMmsValue, 1);
+		if(qualityMmsValue != NULL)
+			MmsValue_printToBuffer(qualityMmsValue, quality, 64);
+
+		timestampMmsValue = MmsValue_getElement(fcdaMmsValue, 2);
+		if(timestampMmsValue != NULL)
+			MmsValue_printToBuffer(timestampMmsValue, timestamp, 64);
 		break;
 	default:
+		valueMmsValue = fcdaMmsValue;
+		Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)timestamp);   //时间格式 yyyy-MM-dd hh:mm:ss.zzz
 		break;
 	}
 
-	char strFcdaMmsValue[64] = {0};
-	MmsValue_printToBuffer(fcdaMmsValue, strFcdaMmsValue, 64);
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, fcda + " type:" + MmsValue_getTypeString(valueMmsValue) + string("  value:") + value + " timestamp:" + timestamp);
 
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, fcda + " type:" + MmsValue_getTypeString(fcdaMmsValue) +
-																		string("  value:") + strFcdaMmsValue +
-																		" utcTime:" + utcTime);
-
-	PointValueType ctype = getPointValueType(fcdaMmsValue);
+	PointValueType ctype = getPointValueType(valueMmsValue);
 
 	RtdbMessage rtdbMessage;
 	rtdbMessage.set_messagetype(TYPE_REALPOINT);
 
 	RealPointValue* realPointValue = rtdbMessage.mutable_realpointvalue();
 	realPointValue->set_channelname(SingletonConfig->getChannelName());
-	realPointValue->set_pointvalue(strFcdaMmsValue);
+	realPointValue->set_pointvalue(value);
 	realPointValue->set_pointaddr(redisAddr);
 	realPointValue->set_valuetype(ctype);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
-	realPointValue->set_timevalue(utcTime);                                        //实时点时标
+	realPointValue->set_timevalue(timestamp);                                        //实时点时标
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
 	realPointValue->set_protocoltype("IEC61850");
-	//realPointValue->set_pcapfilename(mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(mmsContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(fcda) + "_2");
+	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + redisAddr + "_2");
 }
 
 
@@ -714,6 +711,33 @@ void PacketParse::copyTcpContentFromMmsContent(stMmsContent mmsContent)
 	lock.unlock();
 }
 
+bool PacketParse::isOnlineDevice(string iedIp)
+{
+	bool result = false;
+	list<string>::iterator itOnlineDevice = listOnlineDevice.begin();
+	for(; itOnlineDevice != listOnlineDevice.end(); ++itOnlineDevice)
+	{
+		if(iedIp == *itOnlineDevice)
+		{
+			result = true;
+			break;
+		}
+	}
+	return result;
+}
+
+void PacketParse::eraseOnlineDevice(string iedIp)
+{
+	list<string>::iterator itOnlineDevice = listOnlineDevice.begin();
+	for(; itOnlineDevice != listOnlineDevice.end(); ++itOnlineDevice)
+	{
+		if(iedIp == *itOnlineDevice)
+		{
+			listOnlineDevice.erase(itOnlineDevice);
+			break;
+		}
+	}
+}
 
 int PacketParse::publishLinkStatus(stTcpContent tcpContent, string redisAddr, string linkStatus)
 {
@@ -876,7 +900,7 @@ void PacketParse::sendHeartBeat()         //发送心跳
 		string message;
 		rtdbMessage.SerializeToString(&message);
 
-		heatRedisHelper->publish(REDIS_CHANNEL_CONFIG, message);
+		heatRedisHelper->publish(REDIS_CHANNEL_PROCTRL, message);
 		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Write Heart Beat");
 	}
 }
@@ -897,28 +921,34 @@ void PacketParse::judgeLinkStatus()
 				iedName = SingletonConfig->getIedName(tcpContent.dstIp);
 				iedIp = tcpContent.dstIp;
 			}
+			//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, tcpContent.srcIp + " " + boost::lexical_cast<string>(itTcpContent->second.timeCnt));
 
-			list<string>::iterator itDisConDevice = listDisConDevice.begin();
-			for(; itDisConDevice != listDisConDevice.end(); ++itDisConDevice)
+			//设备之前是否在线
+			bool srcIpResult = isOnlineDevice(tcpContent.srcIp);
+
+			if(tcpContent.timeCnt == 0 && srcIpResult == false)
 			{
-				if(iedName == *itDisConDevice)
-					break;
+				listOnlineDevice.push_back(tcpContent.srcIp);
+				bool dstResult = isOnlineDevice(tcpContent.dstIp);
+				if(dstResult == false)           //源ip,目的ip之前都离线，才判断在线
+				{
+					string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
+					publishLinkStatus(tcpContent, redisAddr, "0");
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is connect!");
+				}
+			}
+			else if(tcpContent.timeCnt >= SingletonConfig->getHeartBeatTime() && srcIpResult == true)  //如果已经离线，不再继续告警
+			{
+				eraseOnlineDevice(tcpContent.srcIp);
+				bool dstResult = isOnlineDevice(tcpContent.dstIp);
+				if(dstResult == false)           //源ip,目的ip都没有报文才判断离线
+				{
+					string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
+					publishLinkStatus(tcpContent, redisAddr, "1");
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is disconnect!");
+				}
 			}
 
-			if(tcpContent.timeCnt == 0 && itDisConDevice != listDisConDevice.end())
-			{
-				listDisConDevice.erase(itDisConDevice);
-				string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
-				publishLinkStatus(tcpContent, redisAddr, "0");
-				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is reconnect!");
-			}
-			else if(tcpContent.timeCnt == 10 && itDisConDevice == listDisConDevice.end())
-			{
-				listDisConDevice.push_back(iedName);
-				string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
-				publishLinkStatus(tcpContent, redisAddr, "1");
-				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is disconnect!");
-			}
 			itTcpContent->second.timeCnt++;
 		}
 		lock.unlock();
@@ -928,126 +958,3 @@ void PacketParse::judgeLinkStatus()
 
 
 
-
-
-//RtdbMessage rtdbMessage;
-//	rtdbMessage.set_messagetype(TYPE_REMOTECONTROL);
-//	RemoteControl* remoteControl = rtdbMessage.mutable_remotecontrol();
-//	remoteControl->set_protocolname("iec61850");
-//	remoteControl->set_timestamp("");
-//	remoteControl->set_srcip(inet_ntoa(mmsContent.iphdr->ip_src));
-//	remoteControl->set_srcdevice("");
-//	remoteControl->set_dstip(inet_ntoa(mmsContent.iphdr->ip_dst));
-//	remoteControl->set_dstdevice("");
-//	remoteControl->set_pointname("");
-//	remoteControl->set_pointdesc("");
-//	remoteControl->set_result(0);    //iec61850遥控执行结果  0 失败   1 成功
-//	remoteControl->set_sbo(0);      //选择报文还是执行报文 1 选择  0执行
-//
-//	string dataBuf;
-//	rtdbMessage.SerializeToString(&dataBuf);
-//	redisHelper.publish(CHANNEL, dataBuf);
-
-//		stMmsContent requestMmmsContent = getMmsContentByInvokeId(mmsContent.invokeId);
-//		for(int i = 0; i <  requestMmmsContent.vecDomainName.size(); ++i)
-//		{
-//			string pointName = requestMmmsContent.vecDomainName.at(i) + "/" + requestMmmsContent.vecItemName.at(i);
-//			LOG_DEBUG(pointName);
-//			MmsValue* mmsValue = MmsValue_getElement(mmsContent.mmsValue, i);
-//			char strMmsValue[64] = {0};
-//			MmsValue_printToBuffer(mmsValue, strMmsValue, 64);
-//			LOG_DEBUG(strMmsValue);
-//		}
-
-//vector<string> vecObjectName;
-//for(int i = 0; i < mmsContent->vecDomainName.size(); ++i)
-//{
-//	string domainName = mmsContent->vecDomainName[i];
-//	string itemName = mmsContent->vecItemName[i];
-//	vecObjectName.push_back(domainName + "/" + itemName);
-//}
-//mapInvokeIdObjectName.insert(make_pair(mmsContent->invokeId, vecObjectName));
-
-
-
-//map<uint32_t, vector<string> >::iterator it = mapInvokeIdObjectName.find(mmsContent->invokeId);
-//if(it != mapInvokeIdObjectName.end())
-//{
-//	vector<string> vecObjectName = it->second;
-//	for(int i = 0; i < vecObjectName.size(); ++i)
-//	{
-//		string objectName = vecObjectName[i];
-//		LOG_DEBUG(objectName);
-//
-//		MmsValue* mmsValue = MmsValue_getElement(mmsContent->mmsValue, i);
-//		char strMmsValue[64] = {0};
-//		MmsValue_printToBuffer(mmsValue, strMmsValue, 64);
-//		LOG_DEBUG(strMmsValue);
-//	}
-//}
-
-
-//map<uint32_t, vector<string> >::iterator it = mapInvokeIdObjectName.find(mmsContent->invokeId);
-//if(it != mapInvokeIdObjectName.end())
-//{
-//	vector<string> vecObjectName = it->second;
-//	for(int i = 0; i < vecObjectName.size(); ++i)
-//	{
-//		string objectName = vecObjectName[i];
-//		LOG_DEBUG("objectName:" + objectName);
-//
-//		if(WriteResponse__Member_PR_success == mmsContent->vecResponseResult[i])
-//		{
-//			LOG_DEBUG("WriteResponse__Member_PR_success");
-//		}
-//		else if(WriteResponse__Member_PR_failure == mmsContent->vecResponseResult[i])
-//		{
-//			LOG_DEBUG("WriteResponse__Member_PR_failure");
-//		}
-//	}
-//}
-
-
-//		cout<<inet_ntoa(mmsContent.iphdr->ip_dst)<<endl;
-//		cout<<inet_ntoa(mmsContent.iphdr->ip_src)<<endl;
-//		cout<<ntohs(mmsContent.tcphdr->source)<<endl;
-//		cout<<ntohs(mmsContent.tcphdr->dest)<<endl;
-
-
-//char src_mac[18] = {0};
-//char dst_mac[18] = {0};
-//sprintf(dst_mac,"%02x:%02x:%02x:%02x:%02x:%02x", ethdr->ether_dhost[0], ethdr->ether_dhost[1],ethdr->ether_dhost[2],ethdr->ether_dhost[3],ethdr->ether_dhost[4],ethdr->ether_dhost[5]);
-//sprintf(src_mac,"%02x:%02x:%02x:%02x:%02x:%02x", ethdr->ether_shost[0], ethdr->ether_shost[1],ethdr->ether_shost[2],ethdr->ether_shost[3],ethdr->ether_shost[4],ethdr->ether_shost[5]);
-
-
-//string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
-//					"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
-//					.append("('iec61850").append("','").append(utcTime).append("','")
-//					.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
-//					.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
-//					.append(pointName).append("','").append("").append("',")
-//					.append("0").append(",").append(boost::lexical_cast<string>(sbo)).append(")");
-//
-//mysqlHelper.execSql(sql);
-
-//int sbo = 0;   //报文类型 0 执行  1 选择
-//
-//string sql = string("insert into controldata(protocolName,timeStamp,srcIp,srcDevice,"
-//					"dstIp,dstDevice,pointName,pointDesc,result,sbo)values")
-//					.append("('iec61850").append("','").append(utcTime).append("','")
-//					.append(mmsContent.srcIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.srcIp)).append("','")
-//					.append(mmsContent.dstIp).append("','").append(SingletonConfig->getDeviceDesc(mmsContent.dstIp)).append("','")
-//					.append(pointName).append("','").append("").append("',")
-//					.append(boost::lexical_cast<string>(result)).append(",").append(boost::lexical_cast<string>(sbo)).append(")");
-//
-//mysqlHelper.execSql(sql);
-
-
-//if(mysqlHelper.connect(SingletonConfig->getMysqlIp(), SingletonConfig->getMysqlPort(), SingletonConfig->getMysqlDbName(), SingletonConfig->getMysqlUser(), SingletonConfig->getMysqlPassWd()))
-//{
-//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Mysql Connect Success:" + SingletonConfig->getMysqlIp());
-//}
-//else
-//{
-//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Mysql Connect Failure:" + SingletonConfig->getMysqlIp());
-//}

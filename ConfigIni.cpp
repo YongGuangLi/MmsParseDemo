@@ -221,6 +221,10 @@ int ConfigIni::getPacketCnt() const
 	return packetCnt;
 }
 
+int ConfigIni::getHeartBeatTime() const
+{
+	return heartBeatTime;
+}
 
 //list all key/value under setting session
 //	for (basic_ptree<string, string>::iterator lvitem=lvbtItems.begin();lvitem!=lvbtItems.end();lvitem++)

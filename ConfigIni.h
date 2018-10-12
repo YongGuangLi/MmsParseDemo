@@ -33,10 +33,6 @@ public:
 
 	string getPubAddrByFcda(string);     //通过点名获取发布点
 
-	bool initDeviceDescTxt(string);
-
-	bool initPointDescTxt(string);
-
 	string getIedName(string);
 
 	string getLinkStatusRedisAddr(string iedName, string iedIp);
@@ -62,6 +58,8 @@ public:
 	string getDatasetFilePath() const;
 
 	int getPacketCnt() const;
+
+	int getHeartBeatTime() const;
 private:
 	ConfigIni();
 	virtual ~ConfigIni();

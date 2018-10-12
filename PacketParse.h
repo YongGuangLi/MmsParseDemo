@@ -52,7 +52,7 @@ typedef enum {
 	confirmedServiceResponseWrite,
 	unconfirmedServiceListOfVariable,              //当遥控操作失败，服务器还会利用report服务上送否定响应的具体细节，报告由变量列表ListOfVariable和访问结果AccessResults组成
 	unconfirmedServiceVariableList                 //当遥控操作成功，受控对象状态发生变化，服务器端会触发一个report服务，向客户端报告受控对象最新的状态,报告由有名变量列表VariableList和访问结果AccessResults组成
-}ServiceType;                                      //开关量，保护动作事件，报警等遥信类数据一般通过缓存报告服务上送；    遥测类数据一般通过无缓存报告服务上送
+}ServiceType;                                      //开关量，保护动作事件，报警等遥信类数据一般通过缓存报告服务上送；    遥测类数据一般通过无缓存报告服务上送(一般没有时标，品质)
 
 typedef struct
 {
@@ -134,10 +134,14 @@ public:
 	//获取实时点值类型
 	PointValueType getPointValueType(MmsValue*  mmsValue);
 	//通过redis发布实时点值
-	int publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue, char* utcTime);
+	int publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue);
 
 	//从mms的数据拷贝tcp数据
 	void copyTcpContentFromMmsContent(stMmsContent mmsContent);
+	//设备是否离
+	bool isOnlineDevice(string iedIp);
+	//删除离线设备
+	void eraseOnlineDevice(string iedIp);
 	//通过redis发布连接状态
 	int publishLinkStatus(stTcpContent tcpContent, string redisAddr, string linkStatus);
 public:
@@ -165,13 +169,13 @@ private:
 
 	boost::mutex lock;
 	map<string, stTcpContent> mapTcpContent;                //key:设备ip value:tcp报文内容
-	list<string> listDisConDevice;                          //所有掉线设备的名字
+	list<string> listOnlineDevice;                          //所有在线设备的ip
 
 	bool isRunning;
 
 	DataSetModel dataSetModel;
 
-	map<u_int32_t, u_int32_t> mapReassembledTcpLength;       //tcp多包发送时，总数据长度 (每个包的ACK相同，值在第一个包的TPKT中）
+	map<u_int32_t, u_int32_t> mapReassembledTcpLength;       //tcp多包发送时，总数据长度 (每个包的ACK相同，值在第一个包的TPKT中） key:ack  value:数据长度
 	map<u_int32_t, stSegmentContent*> mapSegmentData;
 };
 

@@ -72,6 +72,7 @@ int main(int argc,char **argv)
 				if(result == 1)             	//返回数据成功
 				{
 					packetCnt++;
+					//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "packetCnt:" + boost::lexical_cast<string>(packetCnt));
 					packetParse.dissectPacket(filePath.filename().string(), pkthdr, packet);     //分析报文内容
 				}
 				else if(result == -2)          //文件最后一个报文
@@ -91,6 +92,7 @@ int main(int argc,char **argv)
 		else
 		{
 			SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Open " + fileName + " Failure");
+			sleep(1);
 		}
 	}
 
@@ -98,20 +100,5 @@ int main(int argc,char **argv)
 	return 0;
 }
 
-
-//if(SingletonConfig->initConfig("/home/GM2000/config.ini"))
-//{
-//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load config.ini Success");
-//}
-
-//if(SingletonConfig->initDeviceDescTxt("/home/GM2000/devicedesc.txt"))
-//{
-//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load devicedesc.txt Success");
-//}
-//
-//if(SingletonConfig->initPointDescTxt("/home/GM2000/pointdesc.txt"))
-//{
-//	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Load pointdesc.txt Success");
-//}
 
 

@@ -16,6 +16,7 @@ using namespace std;
 #define REDIS_CHANNEL_ALARM "alarmdata"
 #define REDIS_CHANNEL_NETCONTROLANA "NetControlAna"
 #define REDIS_CHANNEL_CONFIG "config"
+#define REDIS_CHANNEL_PROCTRL "proCtrl"
 
 class RedisHelper {
 public:

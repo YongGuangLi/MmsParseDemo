@@ -64,6 +64,9 @@ bool RedisHelper::check_connect()
 
 bool RedisHelper::set(string key, string value)
 {
+	if(!check_connect())
+		return false;
+
 	acl::redis redis(client_pub_);
 	bool result = redis.set(key.c_str(), value.c_str());
 	if(!result)
@@ -77,6 +80,9 @@ bool RedisHelper::set(string key, string value)
 
 int RedisHelper::publish(string channel, string message, string key)
 {
+	if(!check_connect())
+		return false;
+
 	if(!key.empty())
 	{
 		set(key, message);
@@ -94,6 +100,9 @@ int RedisHelper::publish(string channel, string message, string key)
 
 int RedisHelper::publish(string channel, char* message, int length, string key)
 {
+	if(!check_connect())
+		return false;
+
 	if(!key.empty())
 	{
 		set(key, message);
