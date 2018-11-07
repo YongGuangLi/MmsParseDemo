@@ -517,7 +517,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(ctrlObject) + "_2");
+	return redisHelper->publish(REDIS_CHANNEL_ALARMCALC, dataBuf, string("6014_") + SingletonConfig->getPubAddrByFcda(ctrlObject) + "_2");
 }
 
 void PacketParse::analysisVaribleList(stMmsContent mmsContent)
@@ -761,7 +761,7 @@ int PacketParse::publishLinkStatus(stTcpContent tcpContent, string redisAddr, st
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_")  + redisAddr + "_" + linkStatus);
+	return redisHelper->publish(REDIS_CHANNEL_ALARMCALC, dataBuf, string("6014_")  + redisAddr + "_" + linkStatus);
 }
 
 
@@ -825,7 +825,7 @@ void PacketParse::subscribe()
 			if(redisHelper->open())
 			{
 				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Redis Connect Success:" + SingletonConfig->getRedisIp());
-				if(redisHelper->subscribe(SingletonConfig->getChannelName()) >= 1)
+				if(redisHelper->subscribe(SingletonConfig->getChannelName(), NULL) >= 1)
 				{
 					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Redis Subscribe Success:" + SingletonConfig->getChannelName());
 				}
@@ -934,7 +934,7 @@ void PacketParse::judgeLinkStatus()
 				{
 					string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
 					publishLinkStatus(tcpContent, redisAddr, "0");
-					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is connect!");
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is online!");
 				}
 			}
 			else if(tcpContent.timeCnt >= SingletonConfig->getHeartBeatTime() && srcIpResult == true)  //如果已经离线，不再继续告警
@@ -945,7 +945,7 @@ void PacketParse::judgeLinkStatus()
 				{
 					string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
 					publishLinkStatus(tcpContent, redisAddr, "1");
-					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, iedName + " is disconnect!");
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, iedName + " is offline!");
 				}
 			}
 

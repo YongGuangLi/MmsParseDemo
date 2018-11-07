@@ -17,14 +17,14 @@ PCAP_INCLUDE = ../third_party/libpcap/include
 LOG_INCLUDE = ../third_party/log4cplus/include
 MYSQL_INCLUDE = ../third_party/mysql-5.1.52/include
 PROTOBUF_INCLUDE = ../third_party/protobuf-3.3.0/include
-REDIS_INCLUDE= ../third_party/redis/include
+ACL_INCLUDE= ../third_party/libacl/include
 XML_INCLUDE = ../third_party/tinyXml/include
 INCLUDES += -I$(BOOST_INCLUDE)
 INCLUDES += -I$(PCAP_INCLUDE)
 INCLUDES += -I$(LOG_INCLUDE)
 INCLUDES += -I$(MYSQL_INCLUDE)
 INCLUDES += -I$(PROTOBUF_INCLUDE)
-INCLUDES += -I$(REDIS_INCLUDE)
+INCLUDES += -I$(ACL_INCLUDE)
 INCLUDES += -I$(XML_INCLUDE)
 
 BOOST_SYSTEM_LIB = ../third_party/boost/lib/libboost_system.a
@@ -37,8 +37,8 @@ PCAP_LIB = ../third_party/libpcap/lib/libpcap.a
 LOG_LIB = ../third_party/log4cplus/lib/liblog4cplus.a 
 MYSQL_LIB = ../third_party/mysql-5.1.52/lib/libmysqlclient.a 
 PROTOBUF_LIB = ../third_party/protobuf-3.3.0/lib/libprotobuf-lite.a 
-ACL_CPP_LIB = ../third_party/redis/lib/libacl_cpp.a
-ACL_LIB = ../third_party/redis/lib/libacl.a
+ACL_CPP_LIB = ../third_party/libacl/lib/libacl_cpp.a
+ACL_LIB = ../third_party/libacl/lib/libacl.a
 
 LDLIBS += -lm -ldl -lrt   
 
