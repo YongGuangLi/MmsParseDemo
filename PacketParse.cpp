@@ -436,7 +436,9 @@ void PacketParse::analysisServiceRequestWrite(stMmsContent mmsContent)
 	char ctrlValue[64] = {0};
 	getControlValue(mmsContent.mmsValue, ctrlValue, 64);
 
-	int ctrlResult = 0;  //Request没有控制结果，以0表示Requset
+	ctrlObject = ctrlObject.substr(0, ctrlObject.length() - 5);
+
+	int ctrlResult = 0;  //请求没有控制结果，以0表示Requset
 
 	publishRemoteControl(mmsContent, ctrlObject,  utcTime, ctrlValue, ctrlCmdType, ctrlResult);
 }
@@ -464,6 +466,8 @@ void PacketParse::analysisServiceResponseWrite(stMmsContent mmsContent)
 
 	char ctrlValue[64] = {0};        //回复没有遥控值
 
+	ctrlObject = ctrlObject.substr(0, ctrlObject.length() - 5);
+
 	int ctrlResult = WriteResponse__Member_PR_success == mmsContent.responseResult ? 1 : 2;       //Reponse遥控执行结果 1:成功  2:失败   0:Request
 
 	publishRemoteControl(mmsContent, ctrlObject, utcTime, ctrlValue, ctrlCmdType, ctrlResult);
@@ -486,15 +490,16 @@ char* PacketParse::getControlValue(MmsValue* mmsValue, char* buffer, int bufferS
 
 int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject, char* utcTime, string ctrlValue, int ctrlCmdType, int ctrlResult)
 {
+	string redisAddr = SingletonConfig->getPubAddrByFcda(ctrlObject);
 	if(ctrlResult == 0)
 	{
 		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO,"Request  invokeId:" + boost::lexical_cast<string>(mmsContent.invokeId) +
-																		  " ctrlObject:" + ctrlObject + " utcTime:" + utcTime + " ctrlValue:" + ctrlValue);
+																		  " ctrlObject:" + ctrlObject + " redisAddr:"+ redisAddr + " utcTime:" + utcTime + " ctrlValue:" + ctrlValue);
 	}
 	else
 	{
 		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO,"Response invokeId:" + boost::lexical_cast<string>(mmsContent.invokeId) +
-																		  " ctrlResult" + boost::lexical_cast<string>(ctrlResult));
+																		  " ctrlResult:" + boost::lexical_cast<string>(ctrlResult) + " utcTime:" + utcTime);
 	}
 
 	RtdbMessage rtdbMessage;
@@ -503,7 +508,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	RealPointValue* realPointValue = rtdbMessage.mutable_realpointvalue();
 	realPointValue->set_channelname(SingletonConfig->getChannelName());
 	realPointValue->set_pointvalue(ctrlValue);
-	realPointValue->set_pointaddr(SingletonConfig->getPubAddrByFcda(ctrlObject));
+	realPointValue->set_pointaddr(redisAddr);
 	realPointValue->set_valuetype(VTYPE_BOOL);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
 	realPointValue->set_timevalue(utcTime);
@@ -512,7 +517,8 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	realPointValue->set_protocoltype("IEC61850");
 	realPointValue->set_ctrlcmdtype(CtrlCmdType(ctrlCmdType));                            //0
 	realPointValue->set_executeresult(CmdExecuteResult(ctrlResult));
-	realPointValue->add_pcapfilename(mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getSrcPacpFilePath() + "/" + mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getDstPacpFilePath() + "/" + mmsContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
@@ -531,7 +537,10 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 	}
 
 	/* check for report-timestamp */
+	char timeOfEntry[64] = {0};
 	if (MmsValue_getBitStringBit(optFlds, 2) == true) {
+		MmsValue* mmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);
+		MmsValue_printToBuffer(mmsValue, timeOfEntry, 64);
 		mmsValueIndex++;
 	}
 
@@ -602,7 +611,11 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 				continue;
 			}
 
-			publishPointValue(mmsContent, fcda, redisAddr, fcdaMmsValue);                                  //通过redis发布实时点值
+			int result = publishPointValue(mmsContent, fcda, timeOfEntry, redisAddr, fcdaMmsValue);            //通过redis发布实时点值
+			if(result < 0)
+			{
+				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "result:" + boost::lexical_cast<string>(result));
+			}
 		}
 	}
 }
@@ -635,9 +648,8 @@ PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 }
 
 
-int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue* fcdaMmsValue)
+int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, char* timeOfEntry, string redisAddr, MmsValue* fcdaMmsValue)
 {
-
 	char value[64] = {0};
 	char quality[64] = {0};
 	char timestamp[64] = {0};
@@ -665,7 +677,11 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string 
 		break;
 	default:
 		valueMmsValue = fcdaMmsValue;
-		Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)timestamp);   //时间格式 yyyy-MM-dd hh:mm:ss.zzz
+		MmsValue_printToBuffer(valueMmsValue, value, 64);
+		if(strlen(timeOfEntry) != 0)
+			memcpy(timestamp, timeOfEntry, 64);    //如果点类型是基础类型，不带时标，
+		else
+			Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)timestamp);   //时间格式 yyyy-MM-dd hh:mm:ss.zzz
 		break;
 	}
 
@@ -682,16 +698,17 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, string 
 	realPointValue->set_pointaddr(redisAddr);
 	realPointValue->set_valuetype(ctype);
 	realPointValue->set_channeltype(2);                                       //通道类型，1-采集  2-网分
-	realPointValue->set_timevalue(timestamp);                                        //实时点时标
+	realPointValue->set_timevalue(timestamp);                                 //实时点时标
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
 	realPointValue->set_protocoltype("IEC61850");
-	realPointValue->add_pcapfilename(mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getSrcPacpFilePath() + "/" + mmsContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getDstPacpFilePath() + "/" + mmsContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
 
-	return redisHelper->publish(REDIS_CHANNEL_CONFIG, dataBuf, string("6014_") + redisAddr + "_2");
+	return redisHelper->publish(REDIS_CHANNEL_ALARMCALC, dataBuf, string("6014_") + redisAddr + "_2");
 }
 
 
@@ -756,7 +773,8 @@ int PacketParse::publishLinkStatus(stTcpContent tcpContent, string redisAddr, st
 	realPointValue->set_timevalue(utcTime);                                   //报文时标
 	realPointValue->set_sourip(tcpContent.srcIp);
 	realPointValue->set_destip(tcpContent.dstIp);
-	realPointValue->add_pcapfilename(tcpContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getSrcPacpFilePath() + "/" + tcpContent.pcapFile);
+	realPointValue->add_pcapfilename(SingletonConfig->getDstPacpFilePath() + "/" + tcpContent.pcapFile);
 
 	string dataBuf;
 	rtdbMessage.SerializeToString(&dataBuf);
@@ -941,7 +959,7 @@ void PacketParse::judgeLinkStatus()
 			{
 				eraseOnlineDevice(tcpContent.srcIp);
 				bool dstResult = isOnlineDevice(tcpContent.dstIp);
-				if(dstResult == false)           //源ip,目的ip都没有报文才判断离线
+				if(dstResult == false)                                                                 //源ip,目的ip都没有报文才判断离线
 				{
 					string redisAddr = SingletonConfig->getLinkStatusRedisAddr(iedName, iedIp);
 					publishLinkStatus(tcpContent, redisAddr, "1");

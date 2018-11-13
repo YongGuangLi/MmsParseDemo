@@ -131,10 +131,14 @@ public:
 
 	//分析有名变量列表
 	void analysisVaribleList(stMmsContent mmsContent);
+
+
+
 	//获取实时点值类型
 	PointValueType getPointValueType(MmsValue*  mmsValue);
+
 	//通过redis发布实时点值
-	int publishPointValue(stMmsContent mmsContent, string fcda, string redisAddr, MmsValue*  fcdaMmsValue);
+	int publishPointValue(stMmsContent mmsContent, string fcda, char* timeOfEntry, string redisAddr, MmsValue*  fcdaMmsValue);
 
 	//从mms的数据拷贝tcp数据
 	void copyTcpContentFromMmsContent(stMmsContent mmsContent);
