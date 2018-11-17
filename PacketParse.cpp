@@ -35,7 +35,7 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 	mmsContent.serviceType = ServiceNOTHING;
 	mmsContent.iphdr = 0;
 	mmsContent.tcphdr = 0;
-	mmsContent.packetTimeStamp = pkthdr->ts.tv_sec * 1000 + pkthdr->ts.tv_usec;
+	mmsContent.packetTimeStamp = pkthdr->ts.tv_sec * 1000 + pkthdr->ts.tv_usec / 1000;
 	mmsContent.pcapFile = pcapfile;
 
 	int offset = 0;
@@ -514,7 +514,7 @@ int PacketParse::publishRemoteControl(stMmsContent mmsContent, string ctrlObject
 	realPointValue->set_timevalue(utcTime);
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
-	realPointValue->set_protocoltype("IEC61850");
+	realPointValue->set_protocoltype("mms");
 	realPointValue->set_ctrlcmdtype(CtrlCmdType(ctrlCmdType));                            //0
 	realPointValue->set_executeresult(CmdExecuteResult(ctrlResult));
 	realPointValue->add_pcapfilename(SingletonConfig->getSrcPacpFilePath() + "/" + mmsContent.pcapFile);
@@ -537,10 +537,10 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 	}
 
 	/* check for report-timestamp */
-	char timeOfEntry[64] = {0};
+	char timestamp[64] = {0};
 	if (MmsValue_getBitStringBit(optFlds, 2) == true) {
 		MmsValue* mmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);
-		MmsValue_printToBuffer(mmsValue, timeOfEntry, 64);
+		MmsValue_printToBuffer(mmsValue, timestamp, 64);
 		mmsValueIndex++;
 	}
 
@@ -587,11 +587,11 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 	}
 
 	vector<string> vecFcd = dataSetModel.getFcdByDataset(datasetname);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSet:") + datasetname + " Size:" + boost::lexical_cast<string>(vecFcd.size()) + " inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSet:") + datasetname + " fcdSize:" + boost::lexical_cast<string>(vecFcd.size()) + " inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
 
 	if(vecFcd.size() != inclusionBitSize)
 	{
-		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, " Size not equal to inclusionBitSize");
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "数据集条目数不等与包含位串个数");
 		return;
 	}
 	for(int i = 0; i < inclusionBitSize; ++i)
@@ -599,22 +599,60 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 		if(MmsValue_getBitStringBit(inclusionBitstring, i))
 		{
 			mmsValueIndex++;
-			MmsValue* fcdaMmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);             //通过数据集中功能约束数据的下标获取当前值
+			MmsValue* fcdMmsValue = MmsValue_getElement(mmsContent.mmsValue, mmsValueIndex);             //通过数据集中功能约束数据的下标获取当前值
 
 			string fcd = vecFcd.at(i);
 			vector<string> vecFcda = dataSetModel.getFcdaByFcd(fcd);                               //通过FCD获取FCD中的每个数据引用
-			string fcda = vecFcda.at(0);
-			string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
-			if(redisAddr.empty())
-			{
-				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, fcda + " not redisAddr");
-				continue;
-			}
+			int fcdaCount = vecFcda.size();
 
-			int result = publishPointValue(mmsContent, fcda, timeOfEntry, redisAddr, fcdaMmsValue);            //通过redis发布实时点值
-			if(result < 0)
+			if(MmsValue_getType(fcdMmsValue) == MMS_ARRAY || MmsValue_getType(fcdMmsValue) == MMS_STRUCTURE)
 			{
-				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "result:" + boost::lexical_cast<string>(result));
+				SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("fcd:") + fcd + " fcdaSize:" + boost::lexical_cast<string>(fcdaCount) + " fcdaMmsValueItems:" + boost::lexical_cast<string>(MmsValue_getArraySize(fcdMmsValue)));
+				if(fcdaCount != MmsValue_getArraySize(fcdMmsValue))
+				{
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "数据属性的个数不等与MmsValue的item个数");
+					return;
+				}
+				if(fcdaCount - 1 > 0)
+				{
+					MmsValue* timestampMmsValue = MmsValue_getElement(fcdMmsValue, fcdaCount - 1);
+
+					MmsType mmsValueType = MmsValue_getType(timestampMmsValue);
+					if(mmsValueType == MMS_UTC_TIME)
+						MmsValue_printToBuffer(timestampMmsValue, timestamp, 64);
+				}
+
+				for(int j = 0; j < fcdaCount; ++j)
+				{
+					string fcda = vecFcda.at(j);
+					string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
+					if(redisAddr.empty())
+					{
+						SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, fcda + " not redisAddr");
+						continue;
+					}
+					MmsValue* fcdaMmsValue = MmsValue_getElement(fcdMmsValue, j);
+					int result = publishPointValue(mmsContent, fcda, timestamp, redisAddr, fcdaMmsValue);            //通过redis发布实时点值
+					if(result < 0)
+					{
+						SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "result:" + boost::lexical_cast<string>(result));
+					}
+				}
+			}
+			else
+			{
+				string fcda = vecFcda.at(0);
+				string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
+				if(redisAddr.empty())
+				{
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, fcda + " not redisAddr");
+					continue;
+				}
+				int result = publishPointValue(mmsContent, fcda, timestamp, redisAddr, fcdMmsValue);            //通过redis发布实时点值
+				if(result < 0)
+				{
+					SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, "result:" + boost::lexical_cast<string>(result));
+				}
 			}
 		}
 	}
@@ -648,14 +686,10 @@ PointValueType PacketParse::getPointValueType(MmsValue*  mmsValue)
 }
 
 
-int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, char* timeOfEntry, string redisAddr, MmsValue* fcdaMmsValue)
+int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, char* timestamp, string redisAddr, MmsValue* fcdaMmsValue)
 {
 	char value[64] = {0};
-	char quality[64] = {0};
-	char timestamp[64] = {0};
-	MmsValue* valueMmsValue = NULL ;
-	MmsValue* qualityMmsValue = NULL;
-	MmsValue* timestampMmsValue = NULL;
+	MmsValue* valueMmsValue = NULL;
 
 	MmsType fcdaType = MmsValue_getType(fcdaMmsValue);
 	switch(fcdaType)
@@ -665,23 +699,17 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, char* t
 		valueMmsValue = MmsValue_getElement(fcdaMmsValue, 0);
 		while( MmsValue_getType(valueMmsValue) == MMS_ARRAY || MmsValue_getType(valueMmsValue) == MMS_STRUCTURE)
 			valueMmsValue = MmsValue_getElement(valueMmsValue, 0);
+
 		MmsValue_printToBuffer(valueMmsValue, value, 64);
-
-		qualityMmsValue = MmsValue_getElement(fcdaMmsValue, 1);
-		if(qualityMmsValue != NULL)
-			MmsValue_printToBuffer(qualityMmsValue, quality, 64);
-
-		timestampMmsValue = MmsValue_getElement(fcdaMmsValue, 2);
-		if(timestampMmsValue != NULL)
-			MmsValue_printToBuffer(timestampMmsValue, timestamp, 64);
 		break;
 	default:
 		valueMmsValue = fcdaMmsValue;
+
 		MmsValue_printToBuffer(valueMmsValue, value, 64);
-		if(strlen(timeOfEntry) != 0)
-			memcpy(timestamp, timeOfEntry, 64);    //如果点类型是基础类型，不带时标，
-		else
+
+		if(strlen(timestamp) == 0)
 			Conversions_msTimeToGeneralizedTime(mmsContent.packetTimeStamp, (uint8_t*)timestamp);   //时间格式 yyyy-MM-dd hh:mm:ss.zzz
+
 		break;
 	}
 
@@ -701,7 +729,7 @@ int PacketParse::publishPointValue(stMmsContent mmsContent, string fcda, char* t
 	realPointValue->set_timevalue(timestamp);                                 //实时点时标
 	realPointValue->set_sourip(mmsContent.srcIp);
 	realPointValue->set_destip(mmsContent.dstIp);
-	realPointValue->set_protocoltype("IEC61850");
+	realPointValue->set_protocoltype("mms");
 	realPointValue->add_pcapfilename(SingletonConfig->getSrcPacpFilePath() + "/" + mmsContent.pcapFile);
 	realPointValue->add_pcapfilename(SingletonConfig->getDstPacpFilePath() + "/" + mmsContent.pcapFile);
 

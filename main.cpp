@@ -37,7 +37,11 @@ int main(int argc,char **argv)
 	signal(SIGINT, signal_handler);   // kill -2 （同 Ctrl + C）
 
 	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------start--------------------");
-	SingletonConfig->setChannelName("N1");
+	if(argc >= 2)
+	{
+		SingletonConfig->setChannelName(argv[1]);
+	}
+
 
     //初始化所有配置数据
 	if(SingletonConfig->loadConfiguration("/home/GM2000/Configuration.xml"))
