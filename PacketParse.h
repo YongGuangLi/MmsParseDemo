@@ -21,6 +21,7 @@
 #include <mms_common_internal.h>
 #include <iso_session.h>
 #include <iso_presentation.h>
+#include <cotp.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
@@ -101,7 +102,7 @@ public:
 	//返回应用数据长度
 	int dissectTPKT(u_char *packet, int offset);
 
-	int dissectCOTP(u_char *packet, int offset);
+	CotpConnection dissectCOTP(u_char *packet, int offset);
 
 	int dissectSession(u_char *packet, int datalen, int offset);
 

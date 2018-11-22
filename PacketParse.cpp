@@ -56,11 +56,12 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 		return;
 	}
 
-	//如果存在此ACK，表示这个ACK是多包发送，并且不是第一个包,并判断是否是最后一个包，如果不是最后一个包，退出，直到接收整个包
 	int segmentDataLength = pkthdr->len - 14 - 20 - mmsContent.tcphdr->doff * 4;
 	int tpkt_len = ntohs(*(uint16_t*)(packet + offset + 2));
+	if(tpkt_len == 0)
+		return;
 
-	//printf("Ack = %ld segmentDataLength = %d\n", mmsContent.tcphdr->ack_seq, segmentDataLength);
+	//printf("Ack = %ld segmentDataLength = %d tpkt_len = %d %x %x\n", mmsContent.tcphdr->ack_seq, segmentDataLength,tpkt_len,packet[offset], packet[offset + 1]);
 	//如果数据长度大于报文实际长度，表示这是分段组包, 一般数据长度等于报文长度减去Mac头，IP头，TCP头  第一个包以0x0300开头    tpkt_len协议数据段长度    segmentDataLength当前报文数据段长度
 	if(tpkt_len != 8196 &&  tpkt_len > segmentDataLength && packet[offset] == 0x03 && packet[offset + 1] == 0x00)
 	{
@@ -103,20 +104,62 @@ void PacketParse::dissectPacket(string pcapfile, struct pcap_pkthdr *pkthdr, u_c
 		mapSegmentData.erase(itSegmentContent);
 	}
 
+
 	int datalen = dissectTPKT(packet, offset);                      //TPKT占4个字节
 	offset += 4;
 	datalen -= 4;
 
-	int cotpOffset = dissectCOTP(packet, offset);                   //COTP占3个字节
-	offset += cotpOffset;
-	datalen -= cotpOffset;
+	CotpConnection cotp = dissectCOTP(packet, offset);                   //COTP占3个字节
+	offset += 3;
+	datalen -= 3;
 
+	if(cotp.isLastDataUnit == true)
+	{
+		map<u_int32_t, stSegmentContent*>::iterator itSegmentContent = mapSegmentData.find(mmsContent.tcphdr->ack_seq);
+		if(itSegmentContent != mapSegmentData.end())
+		{
+			//printf("Ack = %ld datalen = %d %x\n", mmsContent.tcphdr->ack_seq,datalen,packet[offset]);
+			stSegmentContent * segmentContent = itSegmentContent->second;
+			memcpy(segmentContent->segmentData + segmentContent->length, packet + offset, datalen);
+			segmentContent->length += datalen;
+
+			memcpy(packet, segmentContent->segmentData, segmentContent->length);
+			offset = 0;
+			datalen = segmentContent->length;
+
+			delete segmentContent;
+			segmentContent = NULL;
+			mapSegmentData.erase(itSegmentContent);
+		}
+	}
+	else if(cotp.isLastDataUnit == false)
+	{
+		//printf("Ack = %ld datalen = %d %x \n", mmsContent.tcphdr->ack_seq,datalen, packet[offset]);
+		map<u_int32_t, stSegmentContent*>::iterator itSegmentContent = mapSegmentData.find(mmsContent.tcphdr->ack_seq);
+		if(itSegmentContent == mapSegmentData.end())
+		{
+			stSegmentContent * segmentContent = new stSegmentContent();
+			memcpy(segmentContent->segmentData, packet + offset, datalen);
+			segmentContent->length = datalen;
+
+			mapSegmentData.insert(make_pair(mmsContent.tcphdr->ack_seq, segmentContent));
+		}
+		else if(itSegmentContent != mapSegmentData.end())
+		{
+			stSegmentContent * segmentContent = itSegmentContent->second;
+			memcpy(segmentContent->segmentData + segmentContent->length, packet + offset, datalen);
+			segmentContent->length += datalen;
+		}
+		return;
+	}
+
+	//printf("Ack = %ld offset = %d %x\n", mmsContent.tcphdr->ack_seq, offset, packet[offset]);
 	int sessionOffset = dissectSession(packet, datalen, offset);
 	offset += sessionOffset;
 	datalen -= sessionOffset;
 	if(sessionOffset == -1)         //Session Analysis Abnormal
 	{
-		//printf("sessionOffset = %d\n",sessionOffset);
+		printf("sessionOffset = %d\n",sessionOffset);
 		return;
 	}
 
@@ -165,9 +208,16 @@ int PacketParse::dissectTPKT(u_char *packet, int offset)
 	return tpkt_len;
 }
 
-int PacketParse::dissectCOTP(u_char *packet, int offset)
+CotpConnection PacketParse::dissectCOTP(u_char *packet, int offset)
 {
-	return 3;
+	CotpConnection cotp;
+
+    if (packet[offset + 2] & 0x80)
+    	cotp.isLastDataUnit = true;
+	else
+		cotp.isLastDataUnit = false;
+
+	return cotp;
 }
 
 int PacketParse::dissectSession(u_char *packet, int datalen, int offset)
@@ -295,7 +345,7 @@ void PacketParse::SetConfirmedResponsePduResult(MmsPdu_t* mmsPdu, stMmsContent *
 	mmsContent->invokeId = mmsClient_getInvokeId(&mmsPdu->choice.confirmedResponsePdu);
 	//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, "invokeID:" + boost::lexical_cast<string>(mmsContent->invokeId));
 
-	if (ConfirmedServiceResponse_PR_read == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)          	//read  只解析报文，后续没有处理
+	if (ConfirmedServiceResponse_PR_read == mmsPdu->choice.confirmedResponsePdu.confirmedServiceResponse.present)          	//read
 	{
 		mmsContent->serviceType = confirmedServiceResponseRead;
 
@@ -587,7 +637,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 	}
 
 	vector<string> vecFcd = dataSetModel.getFcdByDataset(datasetname);
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, string("DataSet:") + datasetname + " fcdSize:" + boost::lexical_cast<string>(vecFcd.size()) + " inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO,string("dataset:") + datasetname + " fcdSize:" + boost::lexical_cast<string>(vecFcd.size()) + " inclusionBitSize:" + boost::lexical_cast<string>(inclusionBitSize));
 
 	if(vecFcd.size() != inclusionBitSize)
 	{
@@ -628,7 +678,7 @@ void PacketParse::analysisVaribleList(stMmsContent mmsContent)
 					string redisAddr = SingletonConfig->getPubAddrByFcda(fcda);
 					if(redisAddr.empty())
 					{
-						SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_ERROR, fcda + " not redisAddr");
+						SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_INFO, fcda + " not redisAddr");
 						continue;
 					}
 					MmsValue* fcdaMmsValue = MmsValue_getElement(fcdMmsValue, j);
