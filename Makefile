@@ -1,4 +1,4 @@
-LIBIEC_HOME=../
+LIBIEC_HOME=..
 
 PROJECT_BINARY_NAME = MmsParse
 
@@ -15,16 +15,17 @@ include $(LIBIEC_HOME)/make/stack_includes.mk
 BOOST_INCLUDE = ../third_party/boost/include
 PCAP_INCLUDE = ../third_party/libpcap/include
 LOG_INCLUDE = ../third_party/log4cplus/include
-MYSQL_INCLUDE = ../third_party/mysql-5.1.52/include
+#MYSQL_INCLUDE = ../third_party/mysql-5.1.52/include
 PROTOBUF_INCLUDE = ../third_party/protobuf-3.3.0/include
 ACL_INCLUDE= ../third_party/libacl/include
 XML_INCLUDE = ../third_party/tinyXml/include
+
 INCLUDES += -I$(BOOST_INCLUDE)
 INCLUDES += -I$(PCAP_INCLUDE)
 INCLUDES += -I$(LOG_INCLUDE)
-INCLUDES += -I$(MYSQL_INCLUDE)
+#INCLUDES += -I$(MYSQL_INCLUDE)
 INCLUDES += -I$(PROTOBUF_INCLUDE)
-INCLUDES += -I$(ACL_INCLUDE)
+INCLUDES += -I$(ACL_INCLUDE) 
 INCLUDES += -I$(XML_INCLUDE)
 
 BOOST_SYSTEM_LIB = ../third_party/boost/lib/libboost_system.a
@@ -35,7 +36,7 @@ BOOST_DATETIME_LIB =  ../third_party/boost/lib/libboost_date_time.a
 XML_LIB =  ../third_party/tinyXml/lib/libtinyxml.a
 PCAP_LIB = ../third_party/libpcap/lib/libpcap.a 
 LOG_LIB = ../third_party/log4cplus/lib/liblog4cplus.a 
-MYSQL_LIB = ../third_party/mysql-5.1.52/lib/libmysqlclient.a 
+#MYSQL_LIB = ../third_party/mysql-5.1.52/lib/libmysqlclient.a 
 PROTOBUF_LIB = ../third_party/protobuf-3.3.0/lib/libprotobuf-lite.a 
 ACL_CPP_LIB = ../third_party/libacl/lib/libacl_cpp.a
 ACL_LIB = ../third_party/libacl/lib/libacl.a
@@ -47,7 +48,7 @@ all: $(PROJECT_BINARY_NAME)
 include $(LIBIEC_HOME)/make/common_targets.mk
 
 $(PROJECT_BINARY_NAME):	$(PROJECT_OBJS)
-	$(CPP) $(CPPFLAGS) $(LDFLAGS) -o $(PROJECT_BINARY_NAME) -g $(PROJECT_OBJS) $(INCLUDES) $(LIB_NAME) $(MYSQL_LIB) $(PROTOBUF_LIB) $(PCAP_LIB) $(LOG_LIB) $(XML_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) $(BOOST_DATETIME_LIB) $(ACL_CPP_LIB) $(ACL_LIB) $(LDLIBS)  
+	$(CPP) $(CPPFLAGS) $(LDFLAGS) -o $(PROJECT_BINARY_NAME) -g $(PROJECT_OBJS) $(INCLUDES) $(LIB_NAME) $(PROTOBUF_LIB) $(PCAP_LIB) $(LOG_LIB) $(XML_LIB) $(BOOST_SYSTEM_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_REGEX_LIB) $(BOOST_THREAD_LIB) $(BOOST_DATETIME_LIB) $(ACL_CPP_LIB) $(ACL_LIB) $(LDLIBS)  
  
 
 clean:

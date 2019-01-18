@@ -20,7 +20,7 @@ Log4Cplus *Log4Cplus::getInstance()
 Log4Cplus::Log4Cplus()
 {
 	log4cplus::initialize();
-	logger_ = log4cplus::Logger::getInstance("Mms");
+	logger_ = log4cplus::Logger::getInstance(SingletonConfig->getChannelName());
 	configureThread = new log4cplus::ConfigureAndWatchThread(LOG4CPLUS_TEXT("/home/GM2000/log4cplus.properties"), 1000);
 	logRequestFlag_ = 0;
 

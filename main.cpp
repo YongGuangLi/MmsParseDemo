@@ -36,11 +36,10 @@ int main(int argc,char **argv)
 	signal(SIGTERM, signal_handler);  // kill -15 终止
 	signal(SIGINT, signal_handler);   // kill -2 （同 Ctrl + C）
 
-	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------start--------------------");
 	if(argc >= 2)
-	{
 		SingletonConfig->setChannelName(argv[1]);
-	}
+
+	SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "-----------------start--------------------");
 
 
     //初始化所有配置数据
@@ -66,37 +65,42 @@ int main(int argc,char **argv)
 			continue;
 		}
 
-		if(readPcapFile.openPcapFile(fileName))
-		{
-			SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Open " + fileName + " Success");
-			int packetCnt = 0;
-			while(g_isRunning)
-			{
-				int result = readPcapFile.pcapNextEx(&pkthdr, (const u_char **)&packet );
-				if(result == 1)             	//返回数据成功
-				{
-					packetCnt++;
-					//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "packetCnt:" + boost::lexical_cast<string>(packetCnt));
-					packetParse.dissectPacket(filePath.filename().string(), pkthdr, packet);     //分析报文内容
-				}
-				else if(result == -2)          //文件最后一个报文
-				{
-					if(pcapDirManager.getFileNum() <= 1 && packetCnt < SingletonConfig->getPacketCnt())  //文件报文个数还没大最大值,而且没有新文件，继续读取
-					{
-						sleep(1);
-						continue;
-					}
-
-					readPcapFile.closePcapFile();
-					pcapDirManager.renamePcapFile(fileName, SingletonConfig->getDstPacpFilePath() + "/" + filePath.filename().string());
-					break;
-				}
-			}
-		}
-		else
+		if(readPcapFile.openPcapFile(fileName) == false)
 		{
 			SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_WARN, "Open " + fileName + " Failure");
-			sleep(1);
+			if(pcapDirManager.getFileNum() > 1)
+			{
+				pcapDirManager.renamePcapFile(fileName, SingletonConfig->getDstPacpFilePath() + "/" + filePath.filename().string());
+			}
+			else
+				sleep(1);
+
+			continue;
+		}
+
+		SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "Open " + fileName + " Success");
+		int packetCnt = 0;
+		while(g_isRunning)
+		{
+			int result = readPcapFile.pcapNextEx(&pkthdr, (const u_char **)&packet );
+			if(result == 1)             	//返回数据成功
+			{
+				packetCnt++;
+				//SingletonLog4cplus->log(Log4cplus::LOG_NORMAL, Log4cplus::LOG_DEBUG, "packetCnt:" + boost::lexical_cast<string>(packetCnt));
+				packetParse.dissectPacket(filePath.filename().string(), pkthdr, packet);     //分析报文内容
+			}
+			else if(result == -2)          //文件最后一个报文
+			{
+				if(pcapDirManager.getFileNum() <= 1 && packetCnt < SingletonConfig->getPacketCnt())  //文件报文个数还没大最大值,而且没有新文件，继续读取
+				{
+					sleep(1);
+					continue;
+				}
+
+				readPcapFile.closePcapFile();
+				pcapDirManager.renamePcapFile(fileName, SingletonConfig->getDstPacpFilePath() + "/" + filePath.filename().string());
+				break;
+			}
 		}
 	}
 

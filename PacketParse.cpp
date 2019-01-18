@@ -228,7 +228,7 @@ int PacketParse::dissectSession(u_char *packet, int datalen, int offset)
 	message.maxSize = datalen;
 	message.size = datalen;
 
-	IsoSessionIndication isoSessionIndication = IsoSession_parseMessage(&session, &message);
+	IsoSessionIndication isoSessionIndication = IsoSession_parseMessage(&session, &message);   //#include "iso_session.h" 加了extern "C" 否则会找不到定义
 
 	int sessionOffset = -1;
 	switch(isoSessionIndication)
@@ -250,7 +250,7 @@ int PacketParse::dissectPresentation(u_char *packet, int datalen, int offset)
 	readBuffer.size = datalen;
 	readBuffer.maxSize = datalen;
 
-	int presentationOffset = IsoPresentation_parseUserData(&self, &readBuffer);
+	int presentationOffset = IsoPresentation_parseUserData(&self, &readBuffer);  //#include "iso_presentation.h" 加了extern "C" 否则会找不到定义
 	return presentationOffset;
 }
 

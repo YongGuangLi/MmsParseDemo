@@ -11,7 +11,6 @@
 #include "RtdbMessage.pb.h"
 #include "Log4Cplus.h"
 #include "RedisHelper.h"
-#include "MysqlHelper.h"
 #include "SemaphoreQueue.h"
 #include "ConfigIni.h"
 #include "DataSetModel.h"
